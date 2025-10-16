@@ -1,0 +1,3527 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+	  <meta charset="UTF-8">
+	  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	  <title>Xem Gerber</title>
+	    
+	<style>.modal {
+		display: none;
+		/* ẩn mặc định */
+		position: fixed;
+		z-index: 1000;
+		left: 0;
+		top: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.5);
+	}
+
+	/* Khung nội dung modal */
+	.modal-content {
+		background-color: #fff;
+		margin: 10% auto;
+		padding: 20px 25px;
+		border: 1px solid #ccc;
+		border-radius: 8px;
+		width: 350px;
+		position: relative;
+	}
+
+	/* Nút đóng (x) */
+	.modal-content .close {
+		position: absolute;
+		top: 10px;
+		right: 15px;
+		font-size: 20px;
+		cursor: pointer;
+	}
+
+	.modal-content input,
+	.modal-content textarea {
+		width: 100%;
+		margin: 5px 0 10px;
+		padding: 5px;
+		box-sizing: border-box;
+	}
+
+	.dropdown {
+		position: relative;
+		width: 50px;
+		font-family: system-ui, sans-serif;
+		font-size: 14px;
+	}
+
+	.dropdown-toggle {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 6px 10px;
+		border: 1px solid #ccc;
+		border-radius: 6px;
+		background: #fff;
+		cursor: pointer;
+	}
+
+	.dropdown-toggle svg {
+		margin-right: 8px;
+	}
+
+	.dropdown-menu {
+		position: absolute;
+		top: 100%;
+		left: 0;
+		right: 0;
+		border: 1px solid #ccc;
+		border-radius: 6px;
+		background: #fff;
+		margin: 4px 0;
+		display: none;
+		z-index: 999;
+	}
+
+	.dropdown.open .dropdown-menu {
+		display: block;
+	}
+
+	.dropdown-menu li {
+		list-style: none;
+		padding: 6px 10px;
+		display: flex;
+		align-items: center;
+		cursor: pointer;
+	}
+
+	.dropdown-menu li:hover {
+		background: #f0f0f0;
+	}
+
+	.dropdown-menu svg {
+		margin-right: 8px;
+	}
+
+	.group-marker {
+		stroke: #e60000;
+		stroke-width: 0.002;
+		stroke-linecap: round;
+		pointer-events: none;
+	}
+
+	* {
+		margin: 0;
+		padding: 0;
+		box-sizing: border-box;
+	}
+
+	body {
+		font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+		min-height: 100vh;
+		padding: 20px;
+		overflow: hidden;
+	}
+
+	.container {
+		max-width: 100%;
+		height: calc(100vh - 40px);
+		margin: 0 auto;
+		background: rgba(255, 255, 255, 0.95);
+		border-radius: 15px;
+		padding: 20px;
+		box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+		backdrop-filter: blur(10px);
+		display: flex;
+		flex-direction: column;
+	}
+
+	.controls-row {
+		display: flex;
+		gap: 15px;
+		margin-bottom: 10px;
+		flex-wrap: wrap;
+		align-items: center;
+	}
+
+	.file-input-wrapper {
+		position: relative;
+		display: inline-block;
+	}
+
+	.file-input-wrapper input[type=file] {
+		position: absolute;
+		left: -9999px;
+	}
+
+	.file-input-label {
+		background: linear-gradient(45deg, #667eea, #764ba2);
+		color: white;
+		padding: 8px 24px;
+		border-radius: 25px;
+		cursor: pointer;
+		transition: all 0.3s ease;
+		border: none;
+		font-size: 14px;
+		font-weight: 500;
+	}
+
+	.file-input-label:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+	}
+
+	.mode-buttons {
+		display: flex;
+		gap: 10px;
+		background: rgba(255, 255, 255, 0.5);
+		padding: 5px;
+		border-radius: 25px;
+	}
+
+	.mode-btn {
+		padding: 8px 16px;
+		border: none;
+		border-radius: 20px;
+		cursor: pointer;
+		transition: all 0.3s ease;
+		font-size: 14px;
+	}
+
+	.mode-btn.active {
+		background: #667eea;
+		color: white;
+	}
+
+	.mode-btn:not(.active) {
+		background: transparent;
+		color: #666;
+	}
+
+	.mode-btn:hover {
+		background: #667eea;
+		color: white;
+	}
+
+	.zoom-controls {
+		display: flex;
+		gap: 10px;
+		align-items: center;
+		background: rgba(255, 255, 255, 0.7);
+		padding: 8px;
+		border-radius: 20px;
+	}
+
+	.zoom-btn {
+		background: #667eea;
+		color: white;
+		border: none;
+		width: 35px;
+		height: 35px;
+		border-radius: 50%;
+		cursor: pointer;
+		font-size: 18px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition: all 0.3s ease;
+	}
+
+	.zoom-btn:hover {
+		background: #5a67d8;
+		transform: scale(1.1);
+	}
+
+	.zoom-level {
+		font-size: 14px;
+		font-weight: 600;
+		color: #333;
+		min-width: 50px;
+		text-align: center;
+	}
+
+	.action-btn {
+		background: #ff6b6b;
+		color: white;
+		border: none;
+		padding: 8px 16px;
+		border-radius: 20px;
+		cursor: pointer;
+		transition: all 0.3s ease;
+		font-size: 14px;
+	}
+
+	.action-btn:hover {
+		transform: translateY(-2px);
+	}
+
+	.delete-btn {
+		background: #ff9f43;
+	}
+
+	.delete-btn:hover {
+		background: #e67e22;
+	}
+
+	.origin-btn {
+		background: #1dd1a1;
+	}
+
+	.origin-btn:hover {
+		background: #10ac84;
+	}
+
+	.transform-btn {
+		background-color: #8e44ad;
+		color: white;
+	}
+
+	/* Màu mới cho nút xoay/lật */
+	.transform-btn:hover {
+		background-color: #732d91;
+		transform: translateY(-2px);
+	}
+
+	.controls-row button:disabled {
+		background: #ccc !important;
+		color: #888 !important;
+		cursor: not-allowed;
+		transform: none;
+		box-shadow: none;
+	}
+
+	.coord-controls {
+		display: flex;
+		gap: 10px;
+		align-items: center;
+		background: rgba(255, 255, 255, 0.7);
+		padding: 5px 5px 5px 15px;
+		border-radius: 20px;
+	}
+
+	.coord-select {
+		border: none;
+		border-radius: 15px;
+		padding: 5px;
+		font-size: 14px;
+		background-color: rgba(255, 255, 255, 0.7);
+	}
+
+	.coord-select:focus {
+		outline: none;
+	}
+
+	.origin-display {
+		font-size: 12px;
+		padding: 5px 10px;
+		background-color: #e0e0e0;
+		border-radius: 10px;
+	}
+
+	.main-content {
+		display: flex;
+		gap: 20px;
+		flex-grow: 1;
+		min-height: 0;
+	}
+
+	.svg-container {
+		flex: 2;
+		background: white;
+		border-radius: 10px;
+		box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+		position: relative;
+		overflow: hidden;
+		border: 2px dashed #ddd;
+	}
+
+	.svg-container.has-svg {
+		border: 2px solid #667eea;
+	}
+
+	.drop-zone {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		height: 100%;
+		color: #999;
+		text-align: center;
+	}
+
+	.drop-zone.hidden {
+		display: none;
+	}
+
+	.svg-viewport {
+		width: 100%;
+		height: 100%;
+		overflow: auto;
+		position: relative;
+	}
+
+	.svg-content {
+		transform-origin: 0 0;
+		user-select: none;
+		position: relative;
+		height: 100%;
+		width: 100%;
+	}
+
+	.svg-content>svg {
+		display: block;
+		max-width: none;
+		height: auto;
+		position: absolute;
+		top: 0;
+		left: 0;
+	}
+
+	.svg-layer.hidden {
+		display: none;
+	}
+
+	#overlayLayer {
+		pointer-events: none;
+	}
+
+	.svg-layer {
+		pointer-events: none;
+	}
+
+	.svg-layer * {
+		pointer-events: visiblePainted;
+	}
+
+	.info-panel {
+		flex: 1;
+		background: white;
+		border-radius: 10px;
+		box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+		display: flex;
+		flex-direction: column;
+		min-width: 350px;
+		padding: 20px;
+	}
+
+	.panel-section {
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+	}
+
+	.layer-panel {
+		flex: 1;
+	}
+
+	.element-panel {
+		flex: 2;
+	}
+
+	.panel-content {
+		overflow-y: auto;
+		padding-right: 10px;
+	}
+
+	.info-title {
+		color: #333;
+		font-size: 1.2em;
+		margin-bottom: 10px;
+		border-bottom: 2px solid #667eea;
+		padding-bottom: 8px;
+		flex-shrink: 0;
+	}
+
+	.layer-list {
+		list-style: none;
+	}
+
+	.layer-item {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 8px 5px;
+		border-bottom: 1px solid #eee;
+		transition: background-color 0.2s;
+	}
+
+	.layer-item:hover {
+		background-color: #f8f9ff;
+	}
+
+	.layer-name {
+		flex-grow: 1;
+		font-size: 13px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.layer-control {
+		border: none;
+		background: transparent;
+		cursor: pointer;
+		font-size: 16px;
+		padding: 2px;
+	}
+
+	.layer-color-input {
+		-webkit-appearance: none;
+		-moz-appearance: none;
+		appearance: none;
+		width: 22px;
+		height: 22px;
+		background-color: transparent;
+		border: 1px solid #ccc;
+		border-radius: 50%;
+		cursor: pointer;
+	}
+
+	.layer-color-input::-webkit-color-swatch {
+		border-radius: 50%;
+		border: none;
+	}
+
+	.layer-color-input::-moz-color-swatch {
+		border-radius: 50%;
+		border: none;
+	}
+
+	.info-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 12px;
+		table-layout: auto;
+	}
+
+	.info-table th,
+	.info-table td {
+		padding: 6px 4px;
+		text-align: left;
+		border-bottom: 1px solid #eee;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.info-table th {
+		background-color: #f8f9ff;
+		font-weight: 600;
+		color: #555;
+		position: sticky;
+		top: 0;
+	}
+
+	.info-table tbody tr {
+		cursor: pointer;
+		transition: background-color 0.2s ease;
+	}
+
+	.info-table tbody tr:hover {
+		background-color: #f0f2ff;
+	}
+
+	.info-table tbody tr.focused {
+		background-color: #d6dbff;
+	}
+
+	.selection-box {
+		position: absolute;
+		border: 2px dashed #667eea;
+		background: rgba(102, 126, 234, 0.1);
+		pointer-events: none;
+		display: none;
+		z-index: 1000;
+	}
+
+	.selected-highlight-fill {
+		fill: #ff0101 !important;
+	}
+
+	.selected-highlight-stroke {
+		stroke: #ff0101 !important;
+	}
+
+	.focused-highlight {
+		stroke: #4f00ff !important;
+		stroke-width: revert;
+		stroke-opacity: 0.6 !important;
+		paint-order: stroke;
+		fill-opacity: 1 !important;
+		filter: invert(0.8);
+	}
+
+	.multi-selection-info {
+		background: #f8f9ff;
+		border-radius: 8px;
+		padding: 10px;
+		margin-bottom: 10px;
+		border-left: 4px solid #667eea;
+	}
+
+	.multi-selection-info h4 {
+		color: #667eea;
+		margin-bottom: 0;
+		font-size: 1em;
+	}
+
+	.measure-select-highlight {
+		stroke: #4f00ff !important;
+		stroke-width: 0.2;
+		stroke-opacity: 0.9 !important;
+		paint-order: stroke;
+		filter: invert(0.9);
+		fill: #00ff7c !important;
+	}
+
+	.measure-line {
+		stroke: #00a8ff;
+		stroke-width: 0.5;
+		stroke-dasharray: 1, 1;
+		vector-effect: non-scaling-stroke;
+	}
+
+	.measure-text {
+		font-family: monospace;
+		font-weight: bolder;
+		font-size: 2px;
+		fill: #fff;
+		paint-order: stroke;
+		stroke: #0044ff;
+		stroke-width: 1px;
+		stroke-linejoin: round;
+	}
+
+	#measureResults {
+		position: absolute;
+		top: 10px;
+		left: 10px;
+		background: rgba(0, 0, 0, 0.7);
+		color: white;
+		padding: 8px 12px;
+		border-radius: 5px;
+		font-size: 14px;
+		display: none;
+		z-index: 10;
+		pointer-events: none;
+	}
+
+	#layerList {
+		max-height: 120px;
+		/* tương ứng khoảng 3 item cao 40px */
+		overflow-y: auto;
+		border: 1px solid #ccc;
+		border-radius: 4px;
+		padding: 4px;
+		background: #fff;
+	}
+
+	.layer-item {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 4px;
+		border-bottom: 1px solid #eee;
+	}
+
+	.layer-item:last-child {
+		border-bottom: none;
+	}
+
+	#groupInfo {
+		height: 500px;
+		/* giới hạn chiều cao khung group */
+		max-height: 500px;
+		/* giới hạn chiều cao khung group */
+		overflow-y: auto;
+		/* bật scroll dọc */
+		border: 1px solid #ccc;
+		border-radius: 4px;
+		margin-top: 10px;
+		background: #fff;
+	}
+
+	#groupTable {
+		width: 100%;
+		border-collapse: collapse;
+
+	}
+
+	#groupTable th,
+	#groupTable td {
+		border: 1px solid #ddd;
+		padding: 2px;
+		text-align: center;
+		font-size: 13px;
+	}
+
+	#groupTable th {
+		background: #f7f7f7;
+		position: sticky;
+		/* giữ header cố định khi scroll */
+		top: 0;
+		z-index: 1;
+	}
+
+	#elementInfo {
+		max-height: 200px;
+		overflow-y: auto;
+		border: 1px solid #ccc;
+		border-radius: 4px;
+		margin-top: 10px;
+		background: #fff;
+	}
+
+
+	.grouped-element {
+		opacity: 0.3;
+		/* mờ 50% */
+		filter: grayscale(100%);
+		/* chuyển sang xám */
+		pointer-events: none;
+		/* không cho chọn lại (nếu bạn muốn) */
+	}
+
+	/* command log*/
+	#cmdLogPanel {
+		position: fixed;
+		bottom: 10px;
+		right: 10px;
+		width: 320px;
+		height: 180px;
+		background: rgba(20, 20, 20, 0.9);
+		color: #0f0;
+		font-family: monospace;
+		font-size: 12px;
+		border-radius: 6px;
+		box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+		display: flex;
+		flex-direction: column;
+		z-index: 9999;
+	}
+
+	#cmdLogHeader {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		background: rgba(60, 60, 60, 0.8);
+		padding: 4px 8px;
+		border-bottom: 1px solid #333;
+	}
+
+	#cmdLogContent {
+		flex: 1;
+		overflow-y: auto;
+		padding: 6px;
+	}
+
+	#cmdLogClear {
+		background: none;
+		border: none;
+		color: #f33;
+		cursor: pointer;
+		font-size: 12px;
+	}
+
+	#cmdLogClear:hover {
+		color: #ff7777;
+	}
+
+	/*!command log */
+
+	</style>
+	<script src="./gerber-to-svg.min.js"></script>
+</head>
+<body>
+	<div class="container">
+		<div class="controls-row">
+			<div class="file-input-wrapper">
+				<input type="file" id="svgFile" accept=".svg,image/svg+xml,.gbr,.gtl,.gbl,.gts,.gbs,.gto,.gbo,.drl,.txt,.csv, File Tọa độ :Location,Partname,X,Y,R,size_x,size_y" multiple>
+				<label for="svgFile" class="file-input-label">📁 Chọn file(s)</label>
+			</div>
+			<div class="mode-buttons">
+				<button class="mode-btn" data-mode="click">👆 Click</button>
+				<button class="mode-btn active" data-mode="select">⬜ Select</button>
+				<button class="mode-btn" data-mode="pan">🤚 Pan</button>
+				<button class="mode-btn" data-mode="measure">📏 Measure</button>
+			</div>
+			<div class="zoom-controls">
+				<button class="zoom-btn" id="zoomOut">-</button>
+				<div class="zoom-level" id="zoomLevel">100%</div>
+				<button class="zoom-btn" id="zoomIn">+</button>
+				<button class="zoom-btn" id="zoomFit">⌂</button>
+			</div>
+			<label for="coordSystem">Hệ tọa độ:</label>
+			<div class="dropdown" id="coordDropdown">
+				<div class="dropdown-toggle">
+					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M4 20 L20 20" />
+						<path d="M16 16 L20 20 L16 24" />
+						<path d="M4 20 L4 4" />
+						<path d="M0 8 L4 4 L8 8" />
+					</svg>
+
+				</div>
+				<ul class="dropdown-menu">
+					<li data-value="bottom-left">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M4 20 L20 20" />
+							<path d="M16 16 L20 20 L16 24" />
+							<path d="M4 20 L4 4" />
+							<path d="M0 8 L4 4 L8 8" />
+						</svg>
+
+					</li>
+					<li data-value="bottom-right">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M20 20 L4 20" />
+							<path d="M8 16 L4 20 L8 24" />
+							<path d="M20 20 L20 4" />
+							<path d="M16 8 L20 4 L24 8" />
+						</svg>
+
+					</li>
+					<li data-value="top-left">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M4 4 L20 4" />
+							<path d="M16 0 L20 4 L16 8" />
+							<path d="M4 4 L4 20" />
+							<path d="M0 16 L4 20 L8 16" />
+						</svg>
+					</li>
+					<li data-value="top-right">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M20 4 L4 4" />
+							<path d="M8 0 L4 4 L8 8" />
+							<path d="M20 4 L20 20" />
+							<path d="M16 16 L20 20 L24 16" />
+						</svg>
+
+					</li>
+				</ul>
+			</div>
+
+			<!-- select ẩn để giữ chức năng submit form -->
+			<select id="coordSystem" name="coordSystem" style="display:none;">
+				<option value="bottom-left" selected></option>
+				<option value="bottom-right"></option>
+				<option value="top-left"></option>
+				<option value="top-right"></option>
+			</select>
+
+			<button class="action-btn origin-btn" id="setOriginBtn" disabled>📍 Đặt Gốc</button>
+			<button class="action-btn" id="resetOriginBtn" disabled>Reset Gốc</button>
+
+
+
+			<button class="action-btn transform-btn" id="rotatePlus90">↺ +90°</button>
+			<button class="action-btn transform-btn" id="rotateMinus90">⟳ -90°</button>
+			<button class="action-btn transform-btn" id="mirrorX">Flip ⇌</button>
+			<button class="action-btn transform-btn" id="mirrorY">Flip ⥮</button>
+			<button class="action-btn" id="clearSelection" style="margin-right:50px">➕ Get loc</button>
+			<button class="action-btn delete-btn" id="deleteSelected" disabled>🗑️ remove</button>
+
+
+
+		</div>
+		<div class="controls-row">
+			<div class="coord-controls">
+				<!-- -->
+
+
+
+			</div>
+		</div>
+
+		<div class="main-content">
+			<div class="svg-container" id="svgContainer">
+				<div class="drop-zone" id="dropZone">
+					<div style="font-size: 3em; margin-bottom: 20px;">📄</div>
+					<h1>Thả file SVG hoặc Gerber vào đây</h1>
+					<p>hoặc click "Chọn file(s)" để tải lên</p>
+					 <p>&nbsp;</p>
+					<h2 style="color:red">Hướng dẫn sử dụng:</h2>
+					<p style="color:red">Giữ ctrl+ quét chuột trái để chọn đối tượng mà chỉ cần quét 1 phần</p>
+				</div>
+				<div class="svg-viewport" id="svgViewport">
+					<div class="svg-content" id="svgContent"></div>
+				</div>
+				<div class="selection-box" id="selectionBox"></div>
+				<div id="measureResults"></div>
+			</div>
+			<div class="info-panel">
+				<div class="panel-section layer-panel" style="max-height:150px">
+					<h3 class="info-title">🎨 Lớp (Layers)</h3>
+					<div class="panel-content">
+						<ul class="layer-list" id="layerList"></ul>
+					</div>
+				</div>
+				<div class="panel-section element-panel">
+					<h3 class="info-title">📊 Thông tin phần tử</h3>
+					<div id="originInfo" style="margin-bottom: 10px;"></div>
+					<div class="panel-content" id="elementInfo" style="height:150px">
+						<p style="color: #999; text-align: center; margin-top: 20px;">Chọn một hoặc nhiều phần tử để xem thông tin chi tiết</p>
+					</div>
+
+					<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0px;">
+
+						<h3 style="margin:10px; ">Bảng tọa độ</h3>
+						<button class="action-btn delete-btn" id="clearGroupTable" style="height:25px;margin-top:8px; display:flex; align-items:center; justify-content:center; gap:4px;">
+							🧹 <span>Xóa bảng</span>
+						</button>
+
+						<div style="display:flex; gap:5px;">
+							<button class="action-btn" id="exportGroupCSV" style="height:25px;margin-top:8px; margin-right:10px; display:flex; align-items:center; justify-content:center; gap:4px;">
+								📥 <span>Xuất CSV</span>
+							</button>
+						</div>
+
+					</div>
+					<div id="groupInfo">
+						<div class="tablearea">
+							<table id="groupTable">
+								<thead>
+									<tr>
+										<th>No</th>
+										<th>Location</th>
+										<th>Partname</th>
+										<th>X</th>
+										<th>Y</th>
+										<th>R</th>
+										<th>Size_X</th>
+										<th>Size_Y</th>
+										<th>Rotate</th>
+										<th>add db</th>
+										<th>Xóa</th>
+									</tr>
+								</thead>
+								<tbody></tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		</div>
+	</div>  
+
+	<script>
+			// 🧩 Đảm bảo layerContainer tồn tại trước khi sử dụng
+			let svgContainer = document.getElementById("layerContainer");
+		if (!svgContainer) {
+			svgContainer = document.createElement("div");
+			svgContainer.id = "layerContainer";
+			svgContainer.style.cssText = "width:100%; height:100%; position:relative;";
+			document.body.appendChild(svgContainer);
+			console.log("🧩 Đã tự tạo layerContainer trong body.");
+		}
+
+
+		const dropdown = document.getElementById('coordDropdown');
+		const toggle = dropdown.querySelector('.dropdown-toggle');
+		const menu = dropdown.querySelector('.dropdown-menu');
+		const selectHidden = document.getElementById('coordSystem');
+
+		// mở/đóng menu
+		toggle.addEventListener('click', () => {
+			dropdown.classList.toggle('open');
+		});
+
+		// chọn item
+		menu.querySelectorAll('li').forEach(item => {
+			item.addEventListener('click', () => {
+				const value = item.getAttribute('data-value');
+				const label = item.innerHTML;
+
+				// đổi hiển thị trên toggle
+				toggle.innerHTML = item.innerHTML;
+
+				// cập nhật select ẩn
+				selectHidden.value = value;
+
+				// đóng menu
+				dropdown.classList.remove('open');
+			});
+		});
+
+		// click ngoài thì đóng
+		document.addEventListener('click', (e) => {
+			if (!dropdown.contains(e.target)) {
+				dropdown.classList.remove('open');
+			}
+		});
+
+		var svgv, svgcv;
+		// Các hàm helper bên ngoài class
+		function buildSvgFromStreamResult(converter) {
+			const attributes = {
+				version: '1.1',
+				xmlns: 'http://www.w3.org/2000/svg',
+				'xmlns:xlink': 'http://www.w3.org/1999/xlink',
+				width: converter.width + converter.units,
+				height: converter.height + converter.units,
+				viewBox: converter.viewBox.join(' ')
+			};
+			let svgString = '<svg';
+			Object.keys(attributes).forEach(key => {
+				const value = attributes[key];
+				if (value != null) {
+					svgString += ` ${key}="${value}"`;
+				}
+			});
+			svgString += '>';
+			if (converter.layer && converter.layer.length) {
+				if (converter.defs && converter.defs.length) {
+					svgString += '<defs>';
+					converter.defs.forEach(def => {
+						svgString += def;
+					});
+					svgString += '</defs>';
+				}
+				const yTranslate = converter.viewBox[3] + 2 * converter.viewBox[1];
+				const transform = `translate(0,${yTranslate}) scale(1,-1)`;
+				svgString += `<g transform="${transform}" fill="black" stroke="black">`;
+				converter.layer.forEach(layerItem => {
+					svgString += layerItem;
+				});
+				svgString += '</g>';
+			}
+			svgString += '</svg>';
+			return svgString;
+		}
+
+		function getUnit(value) {
+			const match = value.match(/([0-9.]+)([a-zA-Z%]*)/);
+			if (match) {
+				return {
+					number: parseFloat(match[1]),
+					unit: match[2] || 'user units'
+				};
+			}
+			return null;
+		}
+
+		function convertToMm(valueWithUnit) {
+			if (typeof valueWithUnit !== 'string' || !valueWithUnit) {
+				return null;
+			}
+			const parsed = getUnit(valueWithUnit);
+			if (!parsed) return null;
+			const value = parsed.number;
+			const unit = parsed.unit.toLowerCase();
+			switch (unit) {
+				case 'mm':
+					return value;
+				case 'cm':
+					return value * 10;
+				case 'in':
+					return value * 25.4;
+				case 'px':
+					return (value * 25.4) / 96;
+				case 'pt':
+					return (value * 25.4) / 72;
+				case 'pc':
+					return (value * 12 * 25.4) / 72;
+				default:
+					return null;
+			}
+		}
+		// thay đổi canva khi thay đổi tọa độ, kích thước component ở bảng
+		function smoothUpdateSvgComponent(idx, c) {
+			const target = document.getElementById(`comp_${idx}`);
+			if (!target) return;
+
+			const rotGroup = target.querySelector('.comp-rot');
+			const rect = rotGroup?.querySelector('rect');
+			if (!rect) return;
+
+			const circle = rotGroup?.querySelector('circle');
+			const text = rotGroup?.querySelector('text');
+
+			// Lấy vị trí hiện tại
+			const currentTransform = target.getAttribute('transform');
+			const match = /translate\(([^,]+),\s*([^)]+)\)/.exec(currentTransform);
+			let curX = c.x,
+				curY = c.y;
+			if (match) {
+				curX = parseFloat(match[1]);
+				curY = parseFloat(match[2]);
+			}
+
+			// Đích
+			const targetX = c.x;
+			const targetY = c.y;
+
+			const startW = parseFloat(rect.getAttribute('width')) || c.size_x;
+			const startH = parseFloat(rect.getAttribute('height')) || c.size_y;
+			const endW = c.size_x;
+			const endH = c.size_y;
+
+			const startTime = performance.now();
+			const duration = 250; // ms
+
+			function animate(time) {
+				const t = Math.min((time - startTime) / duration, 1);
+				const ease = 1 - Math.pow(1 - t, 3);
+
+				const newX = curX + (targetX - curX) * ease;
+				const newY = curY + (targetY - curY) * ease;
+				const newW = startW + (endW - startW) * ease;
+				const newH = startH + (endH - startH) * ease;
+
+				// === cập nhật vị trí & kích thước ===
+				target.setAttribute('transform', `translate(${newX},${newY})`);
+				rect.setAttribute('x', -newW / 2);
+				rect.setAttribute('y', -newH / 2);
+				rect.setAttribute('width', newW);
+				rect.setAttribute('height', newH);
+
+				// === cập nhật chấm đỏ cực (nếu có) ===
+				if (circle) {
+					const offsetFactor = 2.6;
+					let starX = 0,
+						starY = 0;
+					if (c.top && !c.bot && !c.left && !c.right) starY = newH / offsetFactor;
+					else if (c.bot && !c.top && !c.left && !c.right) starY = -newH / offsetFactor;
+					else if (c.right && !c.left) starX = newW / offsetFactor;
+					else if (c.left && !c.right) starX = -newW / offsetFactor;
+
+					circle.setAttribute('cx', starX);
+					circle.setAttribute('cy', starY);
+					circle.setAttribute('r', Math.min(newW, newH) * 0.08);
+				}
+
+				// === cập nhật chữ ref ===
+				// === cập nhật chữ ref ===
+				if (text) {
+					// Tính kích thước chữ tỉ lệ hợp lý (đừng để quá to)
+					const fontSize = Math.min(Math.min(newW, newH) * 0.35, 0.6);
+					text.setAttribute('font-size', fontSize);
+
+					// Xác định xem có chấm cực để dịch chữ tránh chấm
+					const offset = Math.min(newW, newH) * 0.15; // khoảng cách đẩy chữ
+					let shiftX = 0,
+						shiftY = 0;
+					if (circle) {
+						if (c.top && !c.bot && !c.left && !c.right) shiftY = -offset;
+						else if (c.bot && !c.top && !c.left && !c.right) shiftY = offset;
+						else if (c.left && !c.right) shiftX = offset;
+						else if (c.right && !c.left) shiftX = -offset;
+					}
+
+					// Đặt lại vị trí chữ (tránh đè chấm đỏ)
+					text.setAttribute('x', shiftX);
+					text.setAttribute('y', shiftY);
+
+					// Căn giữa, đảm bảo luôn đọc được
+					text.setAttribute('text-anchor', 'middle');
+					text.setAttribute('dominant-baseline', 'middle');
+				}
+
+				if (t < 1) requestAnimationFrame(animate);
+			}
+
+			requestAnimationFrame(animate);
+		}
+
+
+		class SVGInteractiveViewer {
+			constructor() {
+				this.groupedElements = [];
+				this.layers = [];
+				this.layerIdCounter = 0;
+				this.selectedElements = new Set();
+				this.focusedElement = null;
+				this.viewerIdCounter = 0;
+				this.mode = 'select';
+				this.isSelecting = false;
+				this.isPanning = false;
+				this.measureElements = [];
+				this.startX = 0;
+				this.startY = 0;
+				this.zoom = 1;
+				this.panX = 0;
+				this.panY = 0;
+				this.lastPanX = 0;
+				this.lastPanY = 0;
+				this.masterSVG = null;
+				this.combinedViewBox = null;
+				this.overlayLayerGroup = null;
+				this.userOrigin = {
+					x: 0,
+					y: 0
+				};
+				this.coordOrientation = 'bottom-left';
+				this.isOriginSet = false;
+				this.rotation = 0;
+				this.scaleX = 1;
+				this.scaleY = 1;
+				// --- THUỘC TÍNH MỚI ---
+				this.didRightDrag = false; // Theo dõi việc kéo chuột phải
+				this.initializeEventListeners();
+			}
+
+			initializeEventListeners() {
+				const viewer = this;
+				document.getElementById('svgFile').addEventListener('change', (e) => viewer.loadSVGFiles(e.target.files));
+				const svgContainer = document.getElementById('svgContainer');
+				svgContainer.addEventListener('dragover', (e) => {
+					e.preventDefault();
+					svgContainer.style.borderColor = '#667eea';
+				});
+				svgContainer.addEventListener('dragleave', () => {
+					svgContainer.style.borderColor = '#ddd';
+				});
+				svgContainer.addEventListener('drop', (e) => {
+					e.preventDefault();
+					svgContainer.style.borderColor = '#ddd';
+					viewer.loadSVGFiles(e.dataTransfer.files);
+				});
+
+				document.querySelectorAll('.mode-btn').forEach(btn => {
+					btn.addEventListener('click', () => {
+						document.querySelector('.mode-btn.active').classList.remove('active');
+						btn.classList.add('active');
+						viewer.mode = btn.dataset.mode;
+						const viewport = document.getElementById('svgViewport');
+						if (viewer.mode === 'select') {
+							viewport.style.cursor = 'crosshair';
+						} else if (viewer.mode === 'pan') {
+							viewport.style.cursor = 'grab';
+						} else {
+							viewport.style.cursor = 'default';
+						}
+						viewer.clearMeasurement();
+					});
+				});
+
+				document.getElementById('zoomIn').addEventListener('click', () => viewer.setZoom(viewer.zoom * 1.2));
+				document.getElementById('zoomOut').addEventListener('click', () => viewer.setZoom(viewer.zoom / 1.2));
+				document.getElementById('zoomFit').addEventListener('click', () => viewer.fitToScreen());
+				const viewport = document.getElementById('svgViewport');
+				viewport.addEventListener('wheel', (e) => viewer.handleWheelZoom(e));
+				// --- BẮT ĐẦU THAY ĐỔI ---
+				// Cập nhật trình lắng nghe sự kiện bàn phím
+				document.addEventListener('keydown', (e) => {
+					// Nếu nhấn Escape, hủy đo đạc
+					if (e.key === 'Escape') {
+						viewer.clearMeasurement();
+					}
+					// Nếu nhấn Delete, xóa phần tử đã chọn
+					else if (e.key === 'Delete') {
+						viewer.deleteSelectedElements();
+					}
+				});
+				// --- KẾT THÚC THAY ĐỔI ---
+				viewport.addEventListener('mousedown', (e) => viewer.handleMouseDown(e));
+				viewport.addEventListener('mousemove', (e) => viewer.handleMouseMove(e));
+				viewport.addEventListener('mouseup', (e) => viewer.handleMouseUp(e));
+				viewport.addEventListener('click', (e) => viewer.handleElementClick(e));
+				viewport.addEventListener('contextmenu', (e) => {
+					e.preventDefault();
+					if (!viewer.didRightDrag) {
+						viewer.clearSelection();
+						viewer.clearGroupMarker(); // ✅ xóa dấu +
+					}
+
+					//if (this.selectedElements.size > 0) {
+					//	this.addToGroup();
+					//}
+				});
+
+				document.getElementById('clearSelection').addEventListener('click', () => viewer.addToGroup()); //('click', () => viewer.clearSelection());
+				document.getElementById('deleteSelected').addEventListener('click', () => viewer.deleteSelectedElements());
+				document.getElementById('coordSystem').addEventListener('change', (e) => viewer.onOrientationChange(e.target.value));
+				document.getElementById('setOriginBtn').addEventListener('click', () => viewer.setUserOrigin());
+				document.getElementById('resetOriginBtn').addEventListener('click', () => viewer.resetUserOrigin());
+				document.getElementById('rotatePlus90').addEventListener('click', () => viewer.rotate(90));
+				document.getElementById('rotateMinus90').addEventListener('click', () => viewer.rotate(-90));
+				document.getElementById('mirrorX').addEventListener('click', () => viewer.mirrorX());
+				document.getElementById('mirrorY').addEventListener('click', () => viewer.mirrorY());
+
+				viewer.updateButtonStates();
+
+				document.getElementById('exportGroupCSV')
+					.addEventListener('click', () => viewer.exportGroupToCSV());
+
+
+
+			}
+
+			// --- CẬP NHẬT HÀM MOUSEDOWN ---
+			handleMouseDown(e) {
+				// Pan bằng chuột giữa (1) hoặc chuột phải (2)
+				if (e.button === 1 || e.button === 2) {
+					e.preventDefault();
+					if (e.button === 2) {
+						this.didRightDrag = false; // Reset cờ khi bắt đầu nhấn chuột phải
+					}
+					this.startPan(e);
+					return;
+				}
+				if (e.button !== 0) {
+					return;
+				}
+				const rect = e.currentTarget.getBoundingClientRect();
+				this.startX = e.clientX - rect.left;
+				this.startY = e.clientY - rect.top;
+				switch (this.mode) {
+					case 'pan':
+						this.startPan(e);
+						break;
+					case 'select':
+						this.startSelection();
+						break;
+					case 'click':
+					case 'measure':
+						return;
+				}
+			}
+
+			// --- CẬP NHẬT HÀM MOUSEMOVE ---
+			handleMouseMove(e) {
+				if (this.isPanning) {
+					// e.buttons === 2 có nghĩa là chuột phải đang được nhấn giữ
+					if (e.buttons === 2) {
+						this.didRightDrag = true; // Đánh dấu là đã kéo chuột
+					}
+				}
+				if (!this.isPanning && !this.isSelecting) return;
+				const rect = e.currentTarget.getBoundingClientRect();
+				const currentX = e.clientX - rect.left;
+				const currentY = e.clientY - rect.top;
+				if (this.isSelecting) {
+					this.updateSelection(currentX, currentY);
+				} else if (this.isPanning) {
+					const deltaX = (currentX - this.startX) / this.zoom;
+					const deltaY = (currentY - this.startY) / this.zoom;
+					this.panX = this.lastPanX + deltaX;
+					this.panY = this.lastPanY + deltaY;
+					this.updateTransform();
+				}
+			}
+
+			// ... Các hàm còn lại không thay đổi ...
+			loadSVGFiles(files) {
+				if (!files || files.length === 0) return;
+
+				// Xóa lựa chọn và gốc tọa độ cũ để tránh nhầm lẫn, nhưng KHÔNG xóa layer
+				this.clearSelection();
+				this.resetUserOrigin();
+
+				document.getElementById('dropZone').classList.add('hidden');
+				document.getElementById('svgContainer').classList.add('has-svg');
+
+				const promises = Array.from(files).map(file => {
+					return new Promise((resolve, reject) => {
+						const reader = new FileReader();
+						reader.onload = (e) => {
+							const fileContent = e.target.result;
+							try {
+								if (["text/csv", "text/plain"].includes(file.type)) {
+									const svgString = this.createSvgFromTextData(file.name, fileContent);
+									if (svgString) {
+										const existingLayer = document.getElementById(`layer-${file.name}`);
+										if (existingLayer) existingLayer.remove();
+										if (this.layers && this.layers[file.name]) delete this.layers[file.name];
+										this.addLayer(file.name, svgString);
+									}
+									resolve();
+								} else if (file.type === 'image/svg+xml' || file.name.endsWith('.svg')) {
+									this.addLayer(file.name, fileContent);
+									resolve();
+								} else {
+									const converter = gerberToSvg(fileContent);
+									converter.on('data', () => {});
+									converter.on('end', () => {
+										try {
+											let svgString = buildSvgFromStreamResult(converter);
+											this.addLayer(file.name, svgString);
+											resolve();
+										} catch (buildError) {
+											reject(buildError);
+										}
+									});
+									converter.on('error', () => {
+										resolve();
+									});
+								}
+							} catch (err) {
+								resolve();
+							}
+							document.getElementById('svgFile').value = "";
+						};
+						reader.onerror = (err) => {
+							reject(err);
+						};
+						reader.readAsText(file);
+					});
+				});
+
+				// Sau khi tất cả file mới được xử lý và thêm vào mảng this.layers
+				Promise.all(promises).then(() => {
+					if (this.layers.length > 0) {
+						// Render lại toàn bộ bản vẽ với cả layer cũ và mới
+						this.renderLayers();
+					}
+				}).catch(error => {
+					console.error("An error occurred during file processing:", error);
+				});
+			}
+
+
+			rotate(degrees) {
+				this.layers.forEach(layer => {
+					if (layer.visible) {
+						layer.rotation = (layer.rotation + degrees + 360) % 360;
+						this.updateLayerTransform(layer);
+					}
+				});
+				// Nếu đang đo thì cập nhật lại
+				if (this.measureElements.length === 2) {
+					this.updateMeasurementVisuals();
+				}
+			}
+
+			mirrorX() {
+				this.layers.forEach(layer => {
+					if (layer.visible) {
+						layer.scaleX *= -1;
+						this.updateLayerTransform(layer);
+					}
+				});
+				// Nếu đang đo thì cập nhật lại
+				if (this.measureElements.length === 2) {
+					this.updateMeasurementVisuals();
+				}
+			}
+
+			mirrorY() {
+				this.layers.forEach(layer => {
+					if (layer.visible) {
+						layer.scaleY *= -1;
+						this.updateLayerTransform(layer);
+					}
+				});
+				// Nếu đang đo thì cập nhật lại
+				if (this.measureElements.length === 2) {
+					this.updateMeasurementVisuals();
+				}
+			}
+
+
+			updateUserTransform() {
+				const wrapper = document.getElementById('transformWrapper');
+				if (!wrapper || !this.combinedViewBox) return;
+				const cx = this.combinedViewBox.x + this.combinedViewBox.width / 2;
+				const cy = this.combinedViewBox.y + this.combinedViewBox.height / 2;
+				const transform = ` translate(${cx}, ${cy}) scale(${this.scaleX}, ${this.scaleY}) rotate(${this.rotation}) translate(${-cx}, ${-cy}) `;
+				wrapper.setAttribute('transform', transform.trim());
+			}
+
+			renderLayers() {
+				if (this.layers.length === 0) return;
+
+				let minX = Infinity,
+					minY = Infinity,
+					maxX = -Infinity,
+					maxY = -Infinity;
+				this.layers.forEach(layer => {
+					const vb = layer.viewBox;
+					const scale = layer.scaleFactor;
+					const worldX = vb.x * scale;
+					const worldY = vb.y * scale;
+					const worldWidth = vb.width * scale;
+					const worldHeight = vb.height * scale;
+					minX = Math.min(minX, worldX);
+					minY = Math.min(minY, worldY);
+					maxX = Math.max(maxX, worldX + worldWidth);
+					maxY = Math.max(maxY, worldY + worldHeight);
+				});
+
+				if (minX === Infinity) {
+					minX = 0;
+					minY = 0;
+					maxX = 100;
+					maxY = 100;
+				}
+
+				this.combinedViewBox = {
+					x: minX,
+					y: minY,
+					width: maxX - minX,
+					height: maxY - minY
+				};
+
+				// SVG gốc
+				this.masterSVG = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+				this.masterSVG.setAttribute(
+					'viewBox',
+					`${this.combinedViewBox.x} ${this.combinedViewBox.y} ${this.combinedViewBox.width} ${this.combinedViewBox.height}`
+				);
+				this.masterSVG.style.width = '100%';
+				this.masterSVG.style.height = '100%';
+				this.masterSVG.style.position = 'absolute';
+
+				// Wrapper chứa toàn bộ nội dung (flip Y ở đây)
+				const transformWrapper = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+				transformWrapper.id = 'transformWrapper';
+				this.masterSVG.appendChild(transformWrapper);
+
+				// Nhóm Gerber
+				const gerberLayersGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+				gerberLayersGroup.id = 'gerberLayersGroup';
+				gerberLayersGroup.setAttribute(
+					'transform',
+					`translate(0, ${minY + maxY}) scale(1, -1)`
+				);
+				transformWrapper.appendChild(gerberLayersGroup);
+
+				// Render từng layer
+				this.layers.forEach(layer => {
+					const layerGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+					layerGroup.dataset.layerId = layer.id;
+					layerGroup.classList.add('svg-layer');
+					if (!layer.visible) {
+						layerGroup.classList.add('hidden');
+					}
+
+					layerGroup.setAttribute(
+						'transform',
+						`scale(${layer.scaleFactor}) translate(${layer.offsetX}, ${layer.offsetY})`
+					);
+
+					const directChildren = Array.from(layer.svgElement.children);
+					directChildren.forEach(child => {
+						const clonedChild = child.cloneNode(true);
+						if (child.tagName.toLowerCase() === 'g' && child.hasAttribute('transform')) {
+							clonedChild.removeAttribute('transform');
+						}
+						layerGroup.appendChild(clonedChild);
+					});
+
+					layer.groupElement = layerGroup;
+					gerberLayersGroup.appendChild(layerGroup);
+
+					this.splitMultiPaths(layerGroup);
+				});
+
+				// ✅ Overlay layer: nằm trong transformWrapper, trên cùng
+				this.overlayLayerGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+				this.overlayLayerGroup.id = 'overlayLayer';
+				transformWrapper.appendChild(this.overlayLayerGroup);
+
+				// Đưa toàn bộ SVG vào DOM
+				const svgContent = document.getElementById('svgContent');
+				svgContent.innerHTML = '';
+				svgContent.appendChild(this.masterSVG);
+
+				this.updateUserTransform();
+				this.updateLayerPanel();
+			}
+
+			//add group
+			addToGroup() {
+				
+    if (this.selectedElements.size === 0) return;
+
+    const tbody = document.querySelector('#groupTable tbody');
+
+    // Dùng biến để tính min/max bằng TỌA ĐỘ TUYỆT ĐỐI (world coords)
+    let minAbsX = Infinity,
+        minAbsY = Infinity,
+        maxAbsX = -Infinity,
+        maxAbsY = -Infinity;
+
+    const groupElements = [];
+
+    // --- Thu thập info từng phần tử (luôn lấy ABSOLUTE từ SVG) ---
+    this.selectedElements.forEach(element => {
+        if (element.dataset.inGroup === "true") return;
+
+        const info = this.getAbsoluteElementInfo(element); // <-- luôn absolute
+        if (!info.bounds) return;
+        const b = info.bounds;
+
+        const left = b.centerX - b.width / 2;
+        const right = b.centerX + b.width / 2;
+        const bottom = b.centerY - b.height / 2;
+        const top = b.centerY + b.height / 2;
+
+        minAbsX = Math.min(minAbsX, left);
+        maxAbsX = Math.max(maxAbsX, right);
+        minAbsY = Math.min(minAbsY, bottom);
+        maxAbsY = Math.max(maxAbsY, top);
+
+        groupElements.push({
+            element,
+            absCenterX: b.centerX,
+            absCenterY: b.centerY,
+            width: b.width,
+            height: b.height
+        });
+    });
+
+    if (groupElements.length === 0) {
+        alert("Các phần tử đã chọn đều đã thuộc group hoặc không hợp lệ.");
+        return;
+    }
+
+    const sizeX = maxAbsX - minAbsX;
+    const sizeY = maxAbsY - minAbsY;
+
+    const index = tbody.querySelectorAll('tr').length + 1;
+    const row = document.createElement('tr');
+
+    // Tính center nhóm theo absolute
+    const centerAbsX = (minAbsX + maxAbsX) / 2;
+    const centerAbsY = (minAbsY + maxAbsY) / 2;
+
+    // --- Tính tọa độ hiển thị trong bảng: nếu đã đặt gốc thì hiển thị tọa độ RELATIVE theo hệ hiện hành ---
+    let displayCenterX = centerAbsX;
+    let displayCenterY = centerAbsY;
+    if (this.isOriginSet) {
+        // relative theo userOrigin (tức ABS - origin)
+        let relX = centerAbsX - this.userOrigin.x;
+        let relY = centerAbsY - this.userOrigin.y;
+
+        // áp dụng flip theo hệ tọa độ để hiển thị đúng chiều
+        switch (getCoordDropdownValue()) {
+           
+			case 'bottom-right':
+                relX =- relX;
+                break;
+            case 'top-left':
+				// relX =- relX;
+                relY = -relY;
+                break;
+            case 'top-right':
+                relX = -relX;
+                relY = -relY;
+                break;
+            case 'bottom-left': // giữ nguyên
+				//relX = -relX;
+        }
+
+        displayCenterX = relX;
+        displayCenterY = relY;
+				
+    }
+
+    // Gắn row — lưu cả ABS và REL trong data-* để sử dụng khi cần (ví dụ centerViewport)
+    row.innerHTML = `
+        <td class="group-no" style="cursor:pointer;color:blue"
+            data-cx-abs="${centerAbsX}" data-cy-abs="${centerAbsY}"
+            data-cx-rel="${displayCenterX}" data-cy-rel="${displayCenterY}"
+            data-index="${index}">${index}</td>
+        <td><input id="${index}|loc" type="text" style="width:70px;" value="" placeholder="Loc"></td>
+        <td><input id="${index}|partname" type="text" style="width:100px;" value="" placeholder="Partname"></td>
+        <td style="width:60px;"><input id="${index}|x" class="x-val" disabled type="text" step="0.1" style="width:45px;" value="${displayCenterX.toFixed(3)}"></td>
+        <td style="width:60px;"><input id="${index}|y" class="y-val" disabled type="text" step="0.1" style="width:45px;" value="${displayCenterY.toFixed(3)}"></td>
+        <td style="width:60px;"><input id="${index}|r" class="rot-val" type="text" style="width:45px;" value="0"></td>
+        <td><input class="w-val" type="text" id="${index}|sx" step="0.1" disabled style="width:45px;" value="${sizeX.toFixed(3)}"></td>
+        <td><input class="h-val" type="text" id="${index}|sy" step="0.1" disabled style="width:45px;" value="${sizeY.toFixed(3)}"></td>
+        <td><button class="rotate-btn" disabled>↺</button></td>
+        <td><button onclick="addorupdateDBmd('${index}')">+db</button></td>
+        <td><button class="delete-group">❌</button></td>
+    `;
+
+    // Click để nhảy viewport tới group — dùng TỌA ĐỘ TUYỆT ĐỐI để center chính xác viewport
+    row.querySelector('.group-no').addEventListener('click', (e) => {
+        const cell = e.currentTarget;
+        const absX = parseFloat(cell.dataset.cxAbs);
+        const absY = parseFloat(cell.dataset.cyAbs);
+        this.centerViewportOnAbsolutePoint(absX, absY);
+    });
+
+    // đánh dấu phần tử trong group
+    groupElements.forEach(item => {
+        item.element.classList.add('grouped-element');
+        item.element.dataset.inGroup = "true";
+    });
+
+    // Vẽ bounding box trong overlay — CHÚ Ý: overlay không bị scale/flip như gerberGroup, nên ta phải chuyển Y
+    let rect = null;
+    if (this.overlayLayerGroup) {
+        rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        // Tọa độ trong overlay coordinate:
+        const minX = minAbsX;
+        const minY = minAbsY;
+        const width = sizeX;
+        const height = sizeY;
+
+        // Công thức chuyển Y: (minY + maxY) - (minY + height) == minY+maxY - (minY+height) == maxY - height
+        // but concise: overlayY = (this.combinedViewBox.y + (this.combinedViewBox.y + this.combinedViewBox.height)) - (minY + height)
+        const overlayYOffsetBase = (this.combinedViewBox.y * 2 + this.combinedViewBox.height);
+        const overlayY = overlayYOffsetBase - (minY + height);
+
+        rect.setAttribute('x', minX);
+        rect.setAttribute('y', overlayY);
+        rect.setAttribute('width', width);
+        rect.setAttribute('height', height);
+        rect.setAttribute('class', 'group-bbox');
+        rect.setAttribute('fill', 'none');
+        rect.setAttribute('stroke', 'lime');
+        rect.setAttribute('stroke-width', '0.01');
+        this.overlayLayerGroup.appendChild(rect);
+    }
+
+    // gắn vào list group
+    if (!this.groupedElements) this.groupedElements = [];
+    const groupObj = {
+        elements: groupElements.map(g => g.element),
+        row,
+        rect,
+        absBounds: { minAbsX, minAbsY, maxAbsX, maxAbsY }
+    };
+    this.groupedElements.push(groupObj);
+
+    // nút xoá group
+    row.querySelector('.delete-group').addEventListener('click', () => {
+        groupElements.forEach(item => {
+            item.element.classList.remove('grouped-element');
+            item.element.dataset.inGroup = "false";
+        });
+        if (groupObj.rect && groupObj.rect.parentNode) {
+            groupObj.rect.remove();
+        }
+        row.remove();
+        this.groupedElements = this.groupedElements.filter(g => g !== groupObj);
+    });
+
+    tbody.appendChild(row);
+    row.scrollIntoView({ behavior: "smooth", block: "end" });
+
+    // cập nhật panel & không clear overlay group bbox
+    this.clearSelection(false); // giữ bbox
+}
+
+
+
+			//!add group
+
+
+
+
+			onOrientationChange(newOrientation) {
+				this.coordOrientation = newOrientation;
+				if (this.isOriginSet) {
+					this.updateInfoPanel();
+				}
+			}
+			setUserOrigin() {
+	if (this.selectedElements.size === 0) {
+		alert("Vui lòng chọn ít nhất một phần tử để đặt làm gốc.");
+		return;
+	}
+
+	// === 🔹 Tính bounding box tổng của các phần tử được chọn
+	let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+	this.selectedElements.forEach(element => {
+		const info = this.getAbsoluteElementInfo(element);
+		if (info && info.bounds) {
+			const b = info.bounds;
+			const elMinX = b.centerX - b.width / 2;
+			const elMaxX = b.centerX + b.width / 2;
+			const elMinY = b.centerY - b.height / 2;
+			const elMaxY = b.centerY + b.height / 2;
+			minX = Math.min(minX, elMinX);
+			maxX = Math.max(maxX, elMaxX);
+			minY = Math.min(minY, elMinY);
+			maxY = Math.max(maxY, elMaxY);
+		}
+	});
+	if (minX === Infinity) {
+		alert("Không thể xác định tọa độ của các phần tử đã chọn.");
+		return;
+	}
+
+	// === 🔹 Gán gốc theo hệ tọa độ hiện tại
+	switch (this.coordOrientation) {
+		case "bottom-left":  this.userOrigin = { x: minX, y: minY }; break;
+		case "bottom-right": this.userOrigin = { x: maxX, y: minY }; break;
+		case "top-left":     this.userOrigin = { x: minX, y: maxY }; break;
+		case "top-right":    this.userOrigin = { x: maxX, y: maxY }; break;
+	}
+
+	this.isOriginSet = true;
+	this.updateInfoPanel();
+	this.updateButtonStates();
+
+	// === 🔹 Lấy SVG và nhóm chính
+	const svg = document.querySelector("#svgContent svg");
+	if (!svg) {
+		console.warn("❌ Không tìm thấy SVG trong #svgContent.");
+		return;
+	}
+
+	// Xóa dấu gốc cũ
+	const oldMarker = svg.querySelector("#originMarker");
+	if (oldMarker) oldMarker.remove();
+
+	// Tìm group chính (bị lật trục Y)
+	let mainGroup = svg.querySelector("g[transform*='scale(1,-1)']");
+	if (!mainGroup) mainGroup = svg;
+
+	// === 🔹 Lấy thông tin viewBox (để tính yTranslate chính xác)
+	const vb = svg.viewBox?.baseVal;
+	const vbX = vb ? vb.x : 0;
+	const vbY = vb ? vb.y : 0;
+	const vbW = vb ? vb.width : 0;
+	const vbH = vb ? vb.height : 0;
+
+	// === 🔹 Tính lại Y hiển thị thật (theo công thức trong buildSvgFromStreamResult)
+	const { x, y } = this.userOrigin;
+	const fixedY = (vbH + 2 * vbY) - y; // <-- chuẩn tuyệt đối theo transform gốc
+
+	// === 🔹 Tạo dấu + đỏ
+	const markerGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+	markerGroup.setAttribute("id", "originMarker");
+
+	const size = 10;
+	const lineH = document.createElementNS("http://www.w3.org/2000/svg", "line");
+	lineH.setAttribute("x1", x - size);
+	lineH.setAttribute("y1", fixedY);
+	lineH.setAttribute("x2", x + size);
+	lineH.setAttribute("y2", fixedY);
+
+	const lineV = document.createElementNS("http://www.w3.org/2000/svg", "line");
+	lineV.setAttribute("x1", x);
+	lineV.setAttribute("y1", fixedY - size);
+	lineV.setAttribute("x2", x);
+	lineV.setAttribute("y2", fixedY + size);
+
+	[lineH, lineV].forEach(line => {
+		line.setAttribute("stroke", "red");
+		line.setAttribute("stroke-width", "0.1");
+		line.setAttribute("vector-effect", "non-scaling-stroke");
+	});
+
+	markerGroup.appendChild(lineH);
+	markerGroup.appendChild(lineV);
+	mainGroup.appendChild(markerGroup);
+
+	console.log("📍 Gốc tọa độ người dùng:", this.userOrigin);
+	console.log("🧭 ViewBox:", { vbX, vbY, vbW, vbH });
+	console.log("🟥 Gốc hiển thị thật:", { x, fixedY, formula: "(vbH + 2*vbY) - y" });
+}
+
+
+
+			resetUserOrigin() {
+				this.isOriginSet = false;
+				this.userOrigin = {
+					x: 0,
+					y: 0
+				};
+				this.updateInfoPanel();
+				this.updateButtonStates();
+			}
+			updateButtonStates() {
+				const hasSelection = this.selectedElements.size > 0;
+				document.getElementById('deleteSelected').disabled = !hasSelection;
+				document.getElementById('clearSelection').disabled = !hasSelection;
+				document.getElementById('setOriginBtn').disabled = !hasSelection;
+				document.getElementById('resetOriginBtn').disabled = !this.isOriginSet;
+			}
+			getAbsoluteElementInfo(element) {
+				if (!this.masterSVG || !this.combinedViewBox) {
+					return {
+						tagName: element.tagName,
+						id: element.id || '-',
+						bounds: null
+					};
+				}
+				try {
+					const clientRect = element.getBoundingClientRect();
+					const pt1 = this.masterSVG.createSVGPoint();
+					pt1.x = clientRect.left;
+					pt1.y = clientRect.top;
+					const pt2 = this.masterSVG.createSVGPoint();
+					pt2.x = clientRect.right;
+					pt2.y = clientRect.bottom;
+					const inverseMatrix = this.masterSVG.getScreenCTM().inverse();
+					const svgPt1 = pt1.matrixTransform(inverseMatrix);
+					const svgPt2 = pt2.matrixTransform(inverseMatrix);
+					const yTotal = this.combinedViewBox.y + (this.combinedViewBox.y + this.combinedViewBox.height);
+					const finalY1 = yTotal - svgPt1.y;
+					const finalY2 = yTotal - svgPt2.y;
+					const bounds = {
+						width: Math.abs(svgPt2.x - svgPt1.x),
+						height: Math.abs(finalY2 - finalY1),
+						centerX: (svgPt1.x + svgPt2.x) / 2,
+						centerY: (finalY1 + finalY2) / 2
+					};
+					return {
+						tagName: element.tagName,
+						id: element.id || '-',
+						bounds: bounds
+					};
+				} catch (e) {
+					console.warn("Could not get bounding box for element using CTM:", element, e);
+					return {
+						tagName: element.tagName,
+						id: element.id || '-',
+						bounds: null
+					};
+				}
+			}
+			getElementInfo(element) {
+				const absoluteInfo = this.getAbsoluteElementInfo(element);
+				if (!absoluteInfo.bounds) {
+					return absoluteInfo;
+				}
+				const transformedBounds = {
+					...absoluteInfo.bounds
+				};
+				if (this.isOriginSet) {
+					let relativeX = absoluteInfo.bounds.centerX - this.userOrigin.x;
+					let relativeY = absoluteInfo.bounds.centerY - this.userOrigin.y;
+					switch (this.coordOrientation) {
+						case 'bottom-right':
+							relativeX = -relativeX;
+							break;
+						case 'top-left':
+							relativeY = -relativeY;
+							break;
+						case 'top-right':
+							relativeX = -relativeX;
+							relativeY = -relativeY;
+							break;
+						case 'bottom-left':
+						default:
+							break;
+					}
+					transformedBounds.relativeX = relativeX;
+					transformedBounds.relativeY = relativeY;
+				}
+				return {
+					...absoluteInfo,
+					bounds: transformedBounds
+				};
+			}
+			updateInfoPanel() {
+				const infoDiv = document.getElementById('elementInfo');
+				const originDiv = document.getElementById('originInfo');
+				if (this.isOriginSet) {
+					originDiv.innerHTML = `<div class="origin-display">Gốc tọa độ đặt tại (tuyệt đối): X: ${this.userOrigin.x.toFixed(3)}, Y: ${this.userOrigin.y.toFixed(3)}</div>`;
+				} else {
+					originDiv.innerHTML = '';
+				}
+				if (this.selectedElements.size === 0) {
+					infoDiv.innerHTML = '<p style="color: #999; text-align: center; margin-top: 20px;">Chọn một hoặc nhiều phần tử</p>';
+					return;
+				}
+				let html = `<table class="info-table"><thead><tr><th>Thẻ</th><th>Hình dạng</th><th>X Tương đối</th><th>Y Tương đối</th><th>Kích thước X</th><th>Kích thước Y</th></tr></thead><tbody>`;
+				this.selectedElements.forEach(element => {
+					const info = this.getElementInfo(element);
+					let shape = info.tagName;
+					switch (info.tagName.toLowerCase()) {
+						case 'path':
+							shape = 'Line';
+							break;
+						case 'rect':
+							shape = 'Square';
+							break;
+						case 'circle':
+							shape = 'Circle';
+							break;
+						case 'use':
+							shape = 'Pad';
+							break;
+					}
+					let relX = (info.bounds && info.bounds.relativeX !== undefined) ? info.bounds.relativeX.toFixed(3) : '-';
+					let relY = (info.bounds && info.bounds.relativeY !== undefined) ? info.bounds.relativeY.toFixed(3) : '-';
+					const sizeX = info.bounds ? info.bounds.width.toFixed(3) : '-';
+					const sizeY = info.bounds ? info.bounds.height.toFixed(3) : '-';
+
+					switch (getCoordDropdownValue()) {
+						
+						case 'bottom-right':
+								relX =- relX;
+								break;
+							case 'top-left':
+						// relX =- relX;
+								relY = -relY;
+								break;
+							case 'top-right':
+								relX = -relX;
+								relY = -relY;
+								break;
+							case 'bottom-left': // giữ nguyên
+						//relX = -relX;
+						}
+
+
+					if (!element.dataset.viewerId) element.dataset.viewerId = this.viewerIdCounter++;
+					html += `<tr class="info-table-row" data-viewer-id="${element.dataset.viewerId}"><td title="${info.tagName}">${info.tagName}</td><td title="${shape}">${shape}</td><td title="${relX}"><b>${relX}</b></td><td title="${relY}"><b>${relY}</b></td><td title="${sizeX}">${sizeX}</td><td title="${sizeY}">${sizeY}</td></tr>`;
+				});
+				html += '</tbody></table>';
+				infoDiv.innerHTML = html;
+			}
+			splitMultiPaths(layerGroup) {
+				const pathsToSplit = layerGroup.querySelectorAll('path');
+				pathsToSplit.forEach(originalPath => {
+					const d = originalPath.getAttribute('d');
+					if (!d) return;
+					const subPaths = d.trim().split(/(?=M)/g);
+					if (subPaths.length <= 1) {
+						return;
+					}
+					const parent = originalPath.parentNode;
+					if (!parent) return;
+					subPaths.forEach(subPathString => {
+						const trimmedSubPath = subPathString.trim();
+						if (trimmedSubPath === '') return;
+						const newPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+						for (const attr of originalPath.attributes) {
+							newPath.setAttribute(attr.name, attr.value);
+						}
+						newPath.setAttribute('d', trimmedSubPath);
+						parent.insertBefore(newPath, originalPath);
+					});
+					originalPath.remove();
+				});
+			}
+			deleteSelectedElements() {
+				if (this.selectedElements.size === 0) return;
+				if (confirm(`Bạn có chắc muốn xóa ${this.selectedElements.size} phần tử đã chọn không?`)) {
+					this.selectedElements.forEach(element => {
+						element.remove();
+					});
+					this.clearSelection();
+				}
+			}
+			selectElement(element) {
+				this.selectedElements.add(element);
+				const fillAttr = element.getAttribute('fill');
+				if (fillAttr === 'none' || fillAttr === 'transparent') {
+					element.classList.add('selected-highlight-stroke');
+				} else {
+					element.classList.add('selected-highlight-fill');
+				}
+				this.updateButtonStates();
+			}
+			deselectElement(element) {
+				this.selectedElements.delete(element);
+				element.classList.remove('selected-highlight-fill', 'selected-highlight-stroke');
+				if (this.focusedElement === element) this.focusOnElement(null);
+				this.updateButtonStates();
+				this.updateInfoPanel();
+			}
+			//clearSelection() { this.selectedElements.forEach(element => { element.classList.remove('selected-highlight-fill', 'selected-highlight-stroke', 'focused-highlight', 'measure-select-highlight'); }); this.selectedElements.clear(); this.focusOnElement(null); this.updateInfoPanel(); this.updateButtonStates(); }
+
+			clearSelection() {
+				console.log("👉 clearSelection chạy");
+				this.selectedElements.forEach(element => {
+					element.classList.remove(
+						'selected-highlight-fill',
+						'selected-highlight-stroke',
+						'focused-highlight',
+						'measure-select-highlight'
+					);
+
+
+
+				});
+				this.selectedElements.clear();
+
+				this.focusOnElement(null);
+				this.updateInfoPanel();
+				this.updateButtonStates();
+
+				if (this.overlayLayerGroup) {
+					const tempBoxes = this.overlayLayerGroup.querySelectorAll('.temp-selection-bbox');
+					tempBoxes.forEach(b => {
+						console.log("❌ xoá temp-selection-bbox");
+						b.remove();
+					});
+				}
+			}
+
+
+			//!clearselection
+
+			//selectElementsInScreenRect(selectionRect, event = null) { if (!event || (!event.ctrlKey && !event.metaKey)) this.clearSelection(); const drawableTags = ['rect', 'circle', 'path', 'ellipse', 'line', 'polygon', 'polyline', 'text', 'use']; const viewportRect = document.getElementById('svgViewport').getBoundingClientRect(); const absoluteSelectionRect = { left: selectionRect.left + viewportRect.left, top: selectionRect.top + viewportRect.top, right: selectionRect.right + viewportRect.left, bottom: selectionRect.bottom + viewportRect.top }; this.layers.forEach(layer => { if (!layer.visible || !layer.groupElement) return; layer.groupElement.querySelectorAll(drawableTags.join(',')).forEach(element => { const elementRect = element.getBoundingClientRect(); if ((elementRect.width === 0 && elementRect.height === 0) || elementRect.width < 0) return; const intersects = !(elementRect.right < absoluteSelectionRect.left || elementRect.left > absoluteSelectionRect.right || elementRect.bottom < absoluteSelectionRect.top || elementRect.top > absoluteSelectionRect.bottom); if (intersects) { this.selectElement(element); } }); }); this.updateInfoPanel(); this.updateButtonStates(); }
+			selectElementsInScreenRect(selectionRect, event = null) {
+				if (!event || (!event.ctrlKey && !event.metaKey)) this.clearSelection();
+
+				const drawableTags = ['rect', 'circle', 'path', 'ellipse', 'line', 'polygon', 'polyline', 'text', 'use'];
+				const viewportRect = document.getElementById('svgViewport').getBoundingClientRect();
+
+				const absoluteSelectionRect = {
+					left: selectionRect.left + viewportRect.left,
+					top: selectionRect.top + viewportRect.top,
+					right: selectionRect.right + viewportRect.left,
+					bottom: selectionRect.bottom + viewportRect.top
+				};
+
+				this.layers.forEach(layer => {
+					if (!layer.visible || !layer.groupElement) return;
+
+					layer.groupElement.querySelectorAll(drawableTags.join(',')).forEach(element => {
+						const elementRect = element.getBoundingClientRect();
+						if ((elementRect.width === 0 && elementRect.height === 0) || elementRect.width < 0) return;
+
+						// ✅ kiểm tra containment và intersects
+						const fullyInside = (
+							elementRect.left >= absoluteSelectionRect.left &&
+							elementRect.right <= absoluteSelectionRect.right &&
+							elementRect.top >= absoluteSelectionRect.top &&
+							elementRect.bottom <= absoluteSelectionRect.bottom
+						);
+
+						const intersects = !(
+							elementRect.right < absoluteSelectionRect.left ||
+							elementRect.left > absoluteSelectionRect.right ||
+							elementRect.bottom < absoluteSelectionRect.top ||
+							elementRect.top > absoluteSelectionRect.bottom
+						);
+
+						// Nếu giữ Ctrl/Meta → dùng intersects, ngược lại dùng fullyInside
+						if ((event && (event.ctrlKey || event.metaKey)) ? intersects : fullyInside) {
+							this.selectElement(element);
+						}
+					});
+				});
+
+				this.updateInfoPanel();
+
+				this.updateButtonStates();
+			}
+
+			//
+
+			handleWheelZoom(e) {
+				e.preventDefault();
+				const viewport = document.getElementById('svgViewport');
+				const rect = viewport.getBoundingClientRect();
+				const mouseX = e.clientX - rect.left;
+				const mouseY = e.clientY - rect.top;
+				const delta = e.deltaY > 0 ? 0.9 : 1.1;
+				const oldZoom = this.zoom;
+				const newZoom = Math.max(0.1, Math.min(100, oldZoom * delta));
+				this.panX = this.panX + mouseX * (1 / newZoom - 1 / oldZoom);
+				this.panY = this.panY + mouseY * (1 / newZoom - 1 / oldZoom);
+				this.zoom = newZoom;
+				this.updateTransform();
+				this.updateZoomDisplay();
+			}
+
+			handleElementClick(e) {
+				const drawableTags = ['rect', 'circle', 'path', 'ellipse', 'line', 'polygon', 'polyline', 'text', 'use'];
+				let target = e.target;
+				while (target && target.correspondingUseElement) target = target.correspondingUseElement;
+				while (target && target.tagName !== 'svg') {
+					if (drawableTags.includes(target.localName?.toLowerCase())) break;
+					target = target.parentElement;
+				}
+				if (!target || target.tagName === 'svg') return;
+				const parentLayer = target.closest('.svg-layer');
+				if (parentLayer && (parentLayer.classList.contains('hidden') || parentLayer.id === 'overlayLayer')) return;
+				if (this.mode === 'click' || this.mode === 'select') {
+					if (e.ctrlKey || e.metaKey) {
+						this.toggleElementSelection(target);
+					} else {
+						if (this.mode === 'click') {
+							this.clearSelection();
+						}
+						this.selectElement(target);
+					}
+					this.updateInfoPanel();
+				} else if (this.mode === 'measure') {
+					this.handleMeasureElementSelect(target);
+				}
+			}
+
+
+
+			toggleElementSelection(element) {
+				if (this.selectedElements.has(element)) this.deselectElement(element);
+				else this.selectElement(element);
+			}
+			fitToScreen() {
+				this.zoom = 1;
+				this.panX = 0;
+				this.panY = 0;
+				this.updateTransform();
+				this.updateZoomDisplay();
+			}
+			updateTransform() {
+				document.getElementById('svgContent').style.transform = `scale(${this.zoom}) translate(${this.panX}px, ${this.panY}px)`;
+			}
+			handleMouseUp(e) {
+				if (this.isSelecting) this.endSelection(e);
+				if (this.isPanning) {
+					this.isPanning = false;
+					e.currentTarget.style.cursor = this.mode === 'select' ? 'crosshair' : this.mode === 'pan' ? 'grab' : 'default';
+				}
+				this.isSelecting = false;
+			}
+			startSelection() {
+				this.isSelecting = true;
+				const selectionBox = document.getElementById('selectionBox');
+				selectionBox.style.left = this.startX + 'px';
+				selectionBox.style.top = this.startY + 'px';
+				selectionBox.style.width = '0px';
+				selectionBox.style.height = '0px';
+				selectionBox.style.display = 'block';
+			}
+			updateSelection(currentX, currentY) {
+				const selectionBox = document.getElementById('selectionBox');
+				const left = Math.min(this.startX, currentX);
+				const top = Math.min(this.startY, currentY);
+				const width = Math.abs(currentX - this.startX);
+				const height = Math.abs(currentY - this.startY);
+				selectionBox.style.left = left + 'px';
+				selectionBox.style.top = top + 'px';
+				selectionBox.style.width = width + 'px';
+				selectionBox.style.height = height + 'px';
+			}
+			endSelection(e) {
+				const selectionBox = document.getElementById('selectionBox');
+				selectionBox.style.display = 'none';
+				const viewport = document.getElementById('svgViewport');
+				const viewportRect = viewport.getBoundingClientRect();
+				const endX = e.clientX - viewportRect.left;
+				const endY = e.clientY - viewportRect.top;
+				const screenSelectionRect = {
+					left: Math.min(this.startX, endX),
+					top: Math.min(this.startY, endY),
+					right: Math.max(this.startX, endX),
+					bottom: Math.max(this.startY, endY)
+				};
+				if (screenSelectionRect.right - screenSelectionRect.left < 5 && screenSelectionRect.bottom - screenSelectionRect.top < 5) {
+					this.updateButtonStates();
+					return;
+				}
+				this.selectElementsInScreenRect(screenSelectionRect, e);
+			}
+			clearMeasurement() {
+				this.measureElements.forEach(el => el.classList.remove('measure-select-highlight'));
+				this.measureElements = [];
+				if (this.overlayLayerGroup) {
+					this.overlayLayerGroup.innerHTML = '';
+				}
+				const resultsDiv = document.getElementById('measureResults');
+				if (this.mode === 'measure') {
+					this.updateMeasureStatusText('Chọn phần tử đầu tiên...');
+				} else {
+					resultsDiv.style.display = 'none';
+				}
+				this.clearSelection();
+			}
+			updateMeasureStatusText(text) {
+				const resultsDiv = document.getElementById('measureResults');
+				resultsDiv.style.display = 'block';
+				resultsDiv.textContent = text;
+			}
+			handleMeasureElementSelect(element) {
+				if (this.measureElements.includes(element)) return;
+				if (this.measureElements.length >= 2) this.clearMeasurement();
+				this.measureElements.push(element);
+				this.selectedElements.add(element);
+				element.classList.add('measure-select-highlight');
+				if (this.measureElements.length === 1) this.updateMeasureStatusText('Chọn phần tử thứ hai...');
+				else if (this.measureElements.length === 2) this.updateMeasurementVisuals();
+				this.updateInfoPanel();
+				this.updateButtonStates();
+			}
+
+
+			updateMeasurementVisuals() {
+				if (this.measureElements.length < 2 || !this.masterSVG || !this.overlayLayerGroup) return;
+
+				const wrapper = document.getElementById('transformWrapper');
+				if (!wrapper) return;
+				wrapper.appendChild(this.overlayLayerGroup);
+				// Lấy CTM của wrapper (đã bao gồm xoay/lật)
+				const ctm = wrapper.getScreenCTM();
+				if (!ctm) return;
+
+				this.overlayLayerGroup.innerHTML = '';
+
+				try {
+					const inverseCtm = ctm.inverse();
+					const pt = this.masterSVG.createSVGPoint();
+
+					const getCenterInSVGSpace = (el) => {
+						const elRect = el.getBoundingClientRect();
+						pt.x = elRect.left + elRect.width / 2;
+						pt.y = elRect.top + elRect.height / 2;
+						return pt.matrixTransform(inverseCtm);
+					};
+
+					const center1 = getCenterInSVGSpace(this.measureElements[0]);
+					const center2 = getCenterInSVGSpace(this.measureElements[1]);
+
+					const dist = Math.sqrt(
+						Math.pow(center2.x - center1.x, 2) +
+						Math.pow(center2.y - center1.y, 2)
+					);
+
+					// Vẽ line
+					const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+					line.setAttribute('x1', center1.x);
+					line.setAttribute('y1', center1.y);
+					line.setAttribute('x2', center2.x);
+					line.setAttribute('y2', center2.y);
+					line.setAttribute('class', 'measure-line');
+					this.overlayLayerGroup.appendChild(line);
+
+					// Vẽ text
+					const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+					text.setAttribute('x', (center1.x + center2.x) / 2);
+					text.setAttribute('y', (center1.y + center2.y) / 2);
+					text.setAttribute('class', 'measure-text');
+
+					const fontSize = Math.max(0.5, this.combinedViewBox.width / 200);
+					text.setAttribute('font-size', fontSize);
+					text.setAttribute('text-anchor', 'middle');
+					text.setAttribute('dy', -fontSize / 2);
+					text.textContent = `${dist.toFixed(3)} mm`;
+
+					this.overlayLayerGroup.appendChild(text);
+
+					// Hiển thị kết quả
+					this.updateMeasureStatusText(`Khoảng cách: ${dist.toFixed(3)} mm`);
+				} catch (e) {
+					this.updateMeasureStatusText('Lỗi: Không thể đo.');
+					console.error("Measurement error:", e);
+				}
+			}
+
+
+			//
+
+
+
+			//addLayer(name, svgContent) { const parser = new DOMParser(); const svgDoc = parser.parseFromString(svgContent, 'image/svg+xml'); const svgElement = svgDoc.documentElement; svgElement.style.background = 'transparent'; const firstChild = svgElement.firstElementChild; if (firstChild && firstChild.tagName.toLowerCase() === 'rect' && firstChild.getAttribute('width') === '100%' && firstChild.getAttribute('height') === '100%') { firstChild.remove(); } const viewBoxStr = svgElement.getAttribute('viewBox'); if (!viewBoxStr) { return; } const viewBoxParts = viewBoxStr.split(' ').map(Number); const viewBox = { x: viewBoxParts[0], y: viewBoxParts[1], width: viewBoxParts[2], height: viewBoxParts[3] }; let scaleFactor = 1.0; const widthAttr = svgElement.getAttribute('width'); const heightAttr = svgElement.getAttribute('height'); const widthInMm = convertToMm(widthAttr); if (widthInMm !== null && viewBox.width > 0) { scaleFactor = widthInMm / viewBox.width; } else { const heightInMm = convertToMm(heightAttr); if (heightInMm !== null && viewBox.height > 0) { scaleFactor = heightInMm / viewBox.height; } else { scaleFactor = 1.0; } } const layerId = this.layerIdCounter++; const layer = { id: layerId, name: name, svgElement: svgElement, viewBox: viewBox, scaleFactor: scaleFactor, visible: true, color: null, originalColors: new Map(), groupElement: null }; this.layers.push(layer); }
+			addLayer(name, svgContent) {
+				const parser = new DOMParser();
+				const svgDoc = parser.parseFromString(svgContent, 'image/svg+xml');
+				const svgElement = svgDoc.documentElement;
+				svgElement.style.background = 'transparent';
+
+				// Xóa background rect 100% nếu có
+				const firstChild = svgElement.firstElementChild;
+				if (
+					firstChild &&
+					firstChild.tagName.toLowerCase() === 'rect' &&
+					firstChild.getAttribute('width') === '100%' &&
+					firstChild.getAttribute('height') === '100%'
+				) {
+					firstChild.remove();
+				}
+
+				// Lấy viewBox
+				const viewBoxStr = svgElement.getAttribute('viewBox');
+				if (!viewBoxStr) {
+					return;
+				}
+				const viewBoxParts = viewBoxStr.split(' ').map(Number);
+				const viewBox = {
+					x: viewBoxParts[0],
+					y: viewBoxParts[1],
+					width: viewBoxParts[2],
+					height: viewBoxParts[3]
+				};
+
+				// Tính scaleFactor
+				let scaleFactor = 1.0;
+				const widthAttr = svgElement.getAttribute('width');
+				const heightAttr = svgElement.getAttribute('height');
+				const widthInMm = convertToMm(widthAttr);
+
+				if (widthInMm !== null && viewBox.width > 0) {
+					scaleFactor = widthInMm / viewBox.width;
+				} else {
+					const heightInMm = convertToMm(heightAttr);
+					if (heightInMm !== null && viewBox.height > 0) {
+						scaleFactor = heightInMm / viewBox.height;
+					} else {
+						scaleFactor = 1.0;
+					}
+				}
+
+				// Tạo đối tượng layer
+				const layerId = this.layerIdCounter++;
+				const layer = {
+					id: layerId,
+					name: name,
+					svgElement: svgElement,
+					viewBox: viewBox,
+					scaleFactor: scaleFactor,
+					visible: true,
+					color: null,
+					originalColors: new Map(),
+					groupElement: null,
+
+					// --- thuộc tính mới ---
+					offsetX: 0,
+					offsetY: 0,
+					rotation: 0, // thêm thuộc tính
+					scaleX: 1,
+					scaleY: 1
+				};
+
+				this.layers.push(layer);
+			}
+
+
+			//add layer
+
+			//renderLayers() { if (this.layers.length === 0) return; let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity; this.layers.forEach(layer => { const vb = layer.viewBox; const scale = layer.scaleFactor; const worldX = vb.x * scale; const worldY = vb.y * scale; const worldWidth = vb.width * scale; const worldHeight = vb.height * scale; minX = Math.min(minX, worldX); minY = Math.min(minY, worldY); maxX = Math.max(maxX, worldX + worldWidth); maxY = Math.max(maxY, worldY + worldHeight); }); if (minX === Infinity) { minX = 0; minY = 0; maxX = 100; maxY = 100; } this.combinedViewBox = { x: minX, y: minY, width: maxX - minX, height: maxY - minY }; this.masterSVG = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); this.masterSVG.setAttribute('viewBox', `${this.combinedViewBox.x} ${this.combinedViewBox.y} ${this.combinedViewBox.width} ${this.combinedViewBox.height}`); this.masterSVG.style.width = '100%'; this.masterSVG.style.height = '100%'; this.masterSVG.style.position = 'absolute'; const transformWrapper = document.createElementNS('http://www.w3.org/2000/svg', 'g'); transformWrapper.id = 'transformWrapper'; this.masterSVG.appendChild(transformWrapper); const gerberLayersGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g'); gerberLayersGroup.id = 'gerberLayersGroup'; gerberLayersGroup.setAttribute('transform', `translate(0, ${minY + maxY}) scale(1, -1)`); transformWrapper.appendChild(gerberLayersGroup); this.layers.forEach(layer => { const layerGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g'); layerGroup.dataset.layerId = layer.id; layerGroup.classList.add('svg-layer'); if (!layer.visible) { layerGroup.classList.add('hidden'); } layerGroup.setAttribute('transform', `scale(${layer.scaleFactor})`); const directChildren = Array.from(layer.svgElement.children); directChildren.forEach(child => { const clonedChild = child.cloneNode(true); if (child.tagName.toLowerCase() === 'g' && child.hasAttribute('transform')) { clonedChild.removeAttribute('transform'); } layerGroup.appendChild(clonedChild); }); layer.groupElement = layerGroup; gerberLayersGroup.appendChild(layerGroup); this.splitMultiPaths(layerGroup); }); this.overlayLayerGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g'); this.overlayLayerGroup.id = 'overlayLayer'; this.overlayLayerGroup.classList.add('svg-layer'); transformWrapper.appendChild(this.overlayLayerGroup); const svgContent = document.getElementById('svgContent'); svgContent.innerHTML = ''; svgContent.appendChild(this.masterSVG); this.updateUserTransform(); this.updateLayerPanel(); }
+			//
+			// --- BẮT ĐẦU THAY ĐỔI ---
+			// Chú thích: Danh sách layer trong UI được hiển thị theo thứ tự ngược lại so với mảng `this.layers`.
+			// Vì vậy, "di chuyển lên" trong UI có nghĩa là tăng chỉ số (index) trong mảng.
+			// "di chuyển xuống" trong UI có nghĩa là giảm chỉ số (index) trong mảng.
+			moveLayer(layerId, direction) {
+				const index = this.layers.findIndex(l => l.id === layerId);
+				if (index === -1) return;
+
+				const newIndex = index + direction;
+				if (newIndex < 0 || newIndex >= this.layers.length) return;
+
+				// Đổi vị trí trong mảng
+				const [layer] = this.layers.splice(index, 1);
+				this.layers.splice(newIndex, 0, layer);
+
+				// Đổi vị trí trong SVG DOM
+				if (layer.groupElement && layer.groupElement.parentNode) {
+					const parent = layer.groupElement.parentNode;
+					if (direction === -1) {
+						parent.insertBefore(layer.groupElement, parent.children[newIndex]);
+					} else {
+						parent.insertBefore(layer.groupElement, parent.children[newIndex + 1] || null);
+					}
+				}
+
+				this.updateLayerPanel();
+			}
+			// --- KẾT THÚC THAY ĐỔI ---
+
+			updateLayerTransform(layer) {
+				if (!layer.groupElement) return;
+
+				const cx = this.combinedViewBox ?
+					this.combinedViewBox.x + this.combinedViewBox.width / 2 :
+					0;
+				const cy = this.combinedViewBox ?
+					this.combinedViewBox.y + this.combinedViewBox.height / 2 :
+					0;
+
+				const transform = `
+										translate(${layer.offsetX}, ${layer.offsetY})
+										translate(${cx}, ${cy})
+										scale(${layer.scaleX}, ${layer.scaleY})
+										rotate(${layer.rotation})
+										translate(${-cx}, ${-cy})
+										scale(${layer.scaleFactor})
+									`;
+				layer.groupElement.setAttribute("transform", transform.trim());
+			}
+			moveLayerOffset(layerId, dx, dy) {
+				const layer = this.layers.find(l => l.id === layerId);
+				if (!layer) return;
+				layer.offsetX += dx;
+				layer.offsetY += dy;
+				this.updateLayerTransform(layer);
+			}
+			//
+			moveLayer(layerId, direction) {
+				const index = this.layers.findIndex(l => l.id === layerId);
+				if (index === -1) return; // không tìm thấy
+
+				// 'up' -> tăng index (lên trên/front)
+				// 'down' -> giảm index (xuống dưới/back)
+				if (direction === 'up') {
+					if (index >= this.layers.length - 1) return; // đã ở trên cùng
+					const [layer] = this.layers.splice(index, 1);
+					this.layers.splice(index + 1, 0, layer);
+				} else if (direction === 'down') {
+					if (index <= 0) return; // đã ở dưới cùng
+					const [layer] = this.layers.splice(index, 1);
+					this.layers.splice(index - 1, 0, layer);
+				} else {
+					return;
+				}
+
+				// Cập nhật DOM: nếu các groupElement đã tồn tại, sắp xếp lại parent theo thứ tự this.layers
+				// (appendChild một lần/tuần tự sẽ đặt stacking order chính xác)
+				let parent = null;
+				for (const l of this.layers) {
+					if (l.groupElement && l.groupElement.parentNode) {
+						parent = l.groupElement.parentNode;
+						break;
+					}
+				}
+
+				if (parent) {
+					// append theo thứ tự this.layers (index thấp trước, index cao sau => vẽ chồng đúng)
+					this.layers.forEach(l => {
+						if (l.groupElement) parent.appendChild(l.groupElement);
+					});
+				} else {
+					// Nếu chưa có groupElement (chưa render), fallback an toàn: render lại tất cả
+					this.renderLayers();
+				}
+
+				// Cập nhật panel (hiển thị)
+				this.updateLayerPanel();
+			}
+			updateLayerPanel() {
+				const list = document.getElementById('layerList');
+				if (!list) return; // phòng hờ null
+				list.innerHTML = '';
+
+				// Hiển thị top-first: đảo mảng trước khi render panel
+				[...this.layers].slice().reverse().forEach(layer => {
+					const item = document.createElement('li');
+					item.className = 'layer-item';
+					item.innerHTML = `
+									<button class="layer-control visibility-toggle" title="Ẩn/Hiện lớp">${layer.visible ? '👁️' : '🙈'}</button>
+									<input type="color" class="layer-color-input" title="Đổi màu lớp" value="${layer.color || layer.defaultColor || '#ffffff'}">
+									<button class="layer-control reset-color" title="Reset màu gốc">🔄</button>
+									<span class="layer-name" title="${layer.name}">${layer.name}</span>
+									<input type="number" class="layer-offset" value="1" style="width:50px" title="Offset (mm)">
+									<button class="layer-control move-left" title="Dịch trái">⬅️</button>
+									<button class="layer-control move-right" title="Dịch phải">➡️</button>
+									<button class="layer-control move-up" title="Dịch lên">⬆️</button>
+									<button class="layer-control move-down" title="Dịch xuống">⬇️</button>
+									<button class="layer-control move-layer-up" title="Di chuyển lên">🔼</button>
+									<button class="layer-control move-layer-down" title="Di chuyển xuống">🔽</button>
+									<button class="layer-control delete-layer" title="Xóa lớp">🗑️</button>
+									`;
+					const offsetInput = item.querySelector('.layer-offset');
+
+					item.querySelector('.move-left').addEventListener('click', () => {
+						this.moveLayerOffset(layer.id, -parseFloat(offsetInput.value || 0), 0);
+					});
+					item.querySelector('.move-right').addEventListener('click', () => {
+						this.moveLayerOffset(layer.id, parseFloat(offsetInput.value || 0), 0);
+					});
+					item.querySelector('.move-up').addEventListener('click', () => {
+						this.moveLayerOffset(layer.id, 0, parseFloat(offsetInput.value || 0));
+					});
+					item.querySelector('.move-down').addEventListener('click', () => {
+						this.moveLayerOffset(layer.id, 0, -parseFloat(offsetInput.value || 0));
+					});
+
+
+
+					item.querySelector('.visibility-toggle').addEventListener('click', () => this.toggleLayerVisibility(layer.id));
+					item.querySelector('.layer-color-input').addEventListener('change', (e) => this.changeLayerColor(layer.id, e.target.value));
+					item.querySelector('.reset-color').addEventListener('click', () => this.resetLayerColor(layer.id));
+					item.querySelector('.delete-layer').addEventListener('click', () => this.deleteLayer(layer.id));
+
+					// Các nút di chuyển gọi moveLayer với 'up'/'down'
+					// moveLayer xử lý theo quy ước: 'up' -> tăng index -> lên trên/front
+					item.querySelector('.move-layer-up').addEventListener('click', () => this.moveLayer(layer.id, 'up'));
+					item.querySelector('.move-layer-down').addEventListener('click', () => this.moveLayer(layer.id, 'down'));
+
+					list.appendChild(item);
+				});
+			}
+			deleteLayer(layerId) {
+				const layerIndex = this.layers.findIndex(l => l.id === layerId);
+				if (layerIndex > -1) {
+					const [deletedLayer] = this.layers.splice(layerIndex, 1);
+					if (deletedLayer.groupElement) {
+						deletedLayer.groupElement.remove();
+					}
+					this.clearMeasurement();
+					this.updateLayerPanel();
+					if (this.layers.length === 0) {
+						document.getElementById('dropZone').classList.remove('hidden');
+						document.getElementById('svgContainer').classList.remove('has-svg');
+						if (this.masterSVG) this.masterSVG.remove();
+						this.masterSVG = null;
+					}
+				}
+			}
+			toggleLayerVisibility(layerId) {
+				const layer = this.layers.find(l => l.id === layerId);
+				if (layer && layer.groupElement) {
+					layer.visible = !layer.visible;
+					layer.groupElement.classList.toggle('hidden', !layer.visible);
+					this.updateLayerPanel();
+				}
+			}
+			changeLayerColor(layerId, color) {
+				const layer = this.layers.find(l => l.id === layerId);
+				if (!layer || !layer.groupElement) return;
+				layer.color = color;
+				const colorableElements = layer.groupElement.querySelectorAll('g, path, rect, circle, ellipse, line, polygon, polyline, text');
+				colorableElements.forEach(el => {
+					if (el.hasAttribute('fill') && el.getAttribute('fill') !== 'none' && el.getAttribute('fill') !== '#fff' && el.getAttribute('fill') !== 'white') {
+						el.setAttribute('fill', color);
+					}
+					if (el.hasAttribute('stroke') && el.getAttribute('stroke') !== 'none' && el.getAttribute('stroke') !== '#fff' && el.getAttribute('stroke') !== 'white') {
+						el.setAttribute('stroke', color);
+					}
+				});
+			}
+			resetLayerColor(layerId) {
+				const layer = this.layers.find(l => l.id === layerId);
+				if (!layer || !layer.groupElement) return;
+				layer.color = null;
+				this.updateLayerPanel();
+				const parentContainer = layer.groupElement.parentNode;
+				if (!parentContainer) return;
+				layer.groupElement.remove();
+				const newLayerGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+				newLayerGroup.dataset.layerId = layer.id;
+				newLayerGroup.classList.add('svg-layer');
+				if (!layer.visible) {
+					newLayerGroup.classList.add('hidden');
+				}
+				newLayerGroup.setAttribute('transform', `scale(${layer.scaleFactor})`);
+				const directChildren = Array.from(layer.svgElement.children);
+				directChildren.forEach(child => {
+					const clonedChild = child.cloneNode(true);
+					if (child.tagName.toLowerCase() === 'g' && child.hasAttribute('transform')) {
+						clonedChild.removeAttribute('transform');
+					}
+					newLayerGroup.appendChild(clonedChild);
+				});
+				layer.groupElement = newLayerGroup;
+				parentContainer.appendChild(newLayerGroup);
+			}
+
+			//==========================================
+
+
+			//2025-10-04 1900
+
+			createSvgFromTextData(fileName, textContent) {
+
+				// === XÓA LAYER CŨ NẾU ĐANG TỒN TẠI ===
+				const layerId = `layer-${fileName}-${Date.now()}`;
+				const oldLayer = document.getElementById(layerId);
+				if (oldLayer) {
+					console.log(`Đã xóa layer cũ: ${layerId}`);
+					oldLayer.remove();
+				}
+
+				// === DỌN BẢNG TRƯỚC KHI LOAD LẠI ===
+				const tableBody = document.querySelector('#groupTable tbody');
+				if (tableBody) tableBody.innerHTML = '';
+
+
+				const lines = textContent.trim().split(/\r?\n/);
+				if (lines.length < 2) {
+					throw new Error("File văn bản phải có ít nhất 1 dòng header và 1 dòng dữ liệu.");
+				}
+
+				const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+				const colIndices = {
+					ref: header.indexOf('ref'),
+					partname: header.indexOf('partname'),
+					x: header.indexOf('x'),
+					y: header.indexOf('y'),
+					r: header.indexOf('r'),
+					size_x: header.indexOf('size_x'),
+					size_y: header.indexOf('size_y'),
+					top: header.indexOf('top'),
+					bot: header.indexOf('bot'),
+					left: header.indexOf('left'),
+					right: header.indexOf('right')
+				};
+
+				for (let key in colIndices) {
+					if (colIndices[key] === -1) throw new Error(`Thiếu cột "${key}" trong file.`);
+				}
+
+				const components = [];
+				for (let i = 1; i < lines.length; i++) {
+					const values = lines[i].split(',');
+					if (values.length < header.length) continue;
+
+					const component = {
+						ref: values[colIndices.ref].trim(),
+						partname: values[colIndices.partname].trim(),
+						x: parseFloat(values[colIndices.x]),
+						y: parseFloat(values[colIndices.y]),
+						r: parseFloat(values[colIndices.r]),
+						size_x: parseFloat(values[colIndices.size_x]),
+						size_y: parseFloat(values[colIndices.size_y]),
+						top: parseFloat(values[colIndices.top]),
+						bot: parseFloat(values[colIndices.bot]),
+						left: parseFloat(values[colIndices.left]),
+						right: parseFloat(values[colIndices.right])
+					};
+					if ([component.x, component.y, component.r, component.size_x, component.size_y].some(v => isNaN(v))) continue;
+					components.push(component);
+				}
+
+				if (components.length === 0) throw new Error("Không tìm thấy dữ liệu hợp lệ.");
+
+				// === Đổ dữ liệu vào groupTable ===
+				const tbody = document.querySelector('#groupTable tbody');
+				if (tbody) {
+					tbody.innerHTML = "";
+					components.forEach((c, idx) => {
+						const row = document.createElement('tr');
+						row.innerHTML = `
+						<td class="group-no" style="cursor:pointer;color:blue" data-cx-abs="${c.x}" data-cy-abs="${c.y}" data-index="${idx+1}">${idx + 1}</td>
+						<td><input type="text"  id="${idx+1}|loc" style="width:70px;" value="${c.ref}" placeholder="Loc"></td>
+						<td><input type="text" id="${idx+1}|partname" style="width:100px;" value="${c.partname}" placeholder="Partname"></td>
+						<td style="width:60px;"><input id="${idx+1}|x" class="x-val" type="text" step="0.1" style="width:45px;" value="${c.x.toFixed(3)}"></td>
+						<td style="width:60px;"><input id="${idx+1}|y" class="y-val" type="text" step="0.1" style="width:45px;" value="${c.y.toFixed(3)}"></td>
+						<td style="width:60px;"><input id="${idx+1}|r" class="rot-val" type="text" disabled style="width:45px;" value="${c.r}"></td>
+						<td><input class="w-val" type="text" id="${idx+1}|sx"  step="0.1" style="width:45px;" value="${c.size_x}"></td>
+						<td><input class="h-val" type="text"  id="${idx+1}|sy" step="0.1" style="width:45px;" value="${c.size_y}"></td>
+						<td><button class="rotate-btn">↺</button></td>
+						<td><button onclick="addorupdateDBmd('${idx+1}')">+db</button></td>
+						<td><button class="delete-group">❌</button></td>
+						`;
+						// cập nhật tọa độ và kích thước realtime
+						['x-val', 'y-val', 'w-val', 'h-val'].forEach(cls => {
+							const input = row.querySelector('.' + cls);
+							if (!input) return;
+							input.addEventListener('input', (e) => {
+								const val = parseFloat(e.target.value);
+								if (isNaN(val)) return;
+
+								// Cập nhật giá trị của linh kiện hiện tại
+								if (cls === 'x-val') c.x = val;
+								if (cls === 'y-val') c.y = val;
+								if (cls === 'w-val') c.size_x = val;
+								if (cls === 'h-val') c.size_y = val;
+
+								// Nếu là thay đổi kích thước thì áp dụng cho tất cả linh kiện cùng partname
+								if (cls === 'w-val' || cls === 'h-val') {
+									const sameParts = components.filter(cc => cc.partname === c.partname);
+									sameParts.forEach((cc, iSame) => {
+										cc.size_x = c.size_x;
+										cc.size_y = c.size_y;
+
+										// Cập nhật bảng
+										const trSame = document.querySelector(`#groupTable tbody tr:nth-child(${components.indexOf(cc) + 1})`);
+										if (trSame) {
+											const wInput = trSame.querySelector('.w-val');
+											const hInput = trSame.querySelector('.h-val');
+											if (wInput) wInput.value = c.size_x.toFixed(3);
+											if (hInput) hInput.value = c.size_y.toFixed(3);
+										}
+
+										// Cập nhật trên SVG
+										smoothUpdateSvgComponent(components.indexOf(cc), cc);
+									});
+									logAction(`📏 Cập nhật toàn bộ "${c.partname}" size_x=${c.size_x}, size_y=${c.size_y}`);
+								} else {
+									// Nếu chỉ thay đổi tọa độ X/Y → chỉ cập nhật linh kiện hiện tại
+									smoothUpdateSvgComponent(idx, c);
+									logAction(`🧩 ${c.partname || "?"} cập nhật ${cls.replace("-val","")} = ${val}`);
+								}
+							});
+						});
+
+
+
+
+						tbody.appendChild(row);
+
+						// click vào No → pan đến vị trí linh kiện
+						row.querySelector('.group-no').addEventListener('click', e => {
+							const absX = parseFloat(e.currentTarget.dataset.cxAbs);
+							const absY = parseFloat(e.currentTarget.dataset.cyAbs);
+							this.centerViewportOnAbsolutePoint(absX, absY);
+						});
+
+						// nút xoá dòng
+						row.querySelector('.delete-group').addEventListener('click', () => {
+							const confirmDelete1 = confirm("Bạn có chắc chắn muốn xóa linh kiện này không?");
+							if (!confirmDelete1) return; // người dùng chọn No → thoát
+							// 🔍 Lấy thông tin linh kiện trước khi xóa
+							const loc = document.getElementById(`${idx+1}|loc`)?.value || "(N/A)";
+							const partname = document.getElementById(`${idx+1}|partname`)?.value || "(N/A)";
+							const x = document.getElementById(`${idx+1}|x`)?.value || "(?)";
+							const y = document.getElementById(`${idx+1}|y`)?.value || "(?)";
+
+							// 🧩 Ghi log xóa
+
+							logAction(`❌ Xóa linh kiện: Loc=${loc}; Part=${partname}; X=${x}; Y=${y}`);
+
+							row.remove()
+
+						});
+
+						// nút xoay +90°
+						row.querySelector('.rotate-btn').addEventListener('click', () => {
+							c.r = (c.r + 90) % 360;
+							row.querySelector('.rot-val').value = c.r;
+							const target = document.querySelector(`#comp_${idx}`);
+							if (target) {
+								const current = parseFloat(target.getAttribute('data-rotation') || 0);
+								const newR = current + 90;
+								target.setAttribute('data-rotation', newR);
+								const gInner = target.querySelector('g');
+								if (gInner) gInner.setAttribute('transform', `rotate(${newR})`);
+							}
+							// 🪵 Ghi log
+							logAction(`↺ Xoay linh kiện ${c.ref || "?"} +90° → ${c.r}°`);
+
+						});
+					});
+
+				}
+
+				// === Vẽ SVG ===
+				let minX = Infinity,
+					minY = Infinity,
+					maxX = -Infinity,
+					maxY = -Infinity;
+				components.forEach(c => {
+					minX = Math.min(minX, c.x - c.size_x / 2);
+					minY = Math.min(minY, c.y - c.size_y / 2);
+					maxX = Math.max(maxX, c.x + c.size_x / 2);
+					maxY = Math.max(maxY, c.y + c.size_y / 2);
+				});
+
+				const padding = Math.max(maxX - minX, maxY - minY) * 0.05;
+				const vbX = minX - padding;
+				const vbY = minY - padding;
+				const vbW = (maxX - minX) + 2 * padding;
+				const vbH = (maxY - minY) + 2 * padding;
+				const yFlip = vbY + (vbY + vbH);
+
+				const svgElements = components.map((c, i) => {
+					const fontSize = Math.min(Math.min(c.size_x, c.size_y) * 0.6, 0.8);
+					const rotation = c.r;
+					const ofset1 = 2.6;
+					let starX = 0,
+						starY = 0;
+					if (c.top && !c.bot && !c.left && !c.right) starY = c.size_y / ofset1;
+					else if (c.bot && !c.top && !c.left && !c.right) starY = -c.size_y / ofset1;
+					else if (c.right && !c.left) starX = c.size_x / ofset1;
+					else if (c.left && !c.right) starX = -c.size_x / ofset1;
+
+					//! font size
+					return `
+		<g id="comp_${i}" data-rotation="${c.r || 0}" transform="translate(${c.x}, ${c.y})">
+			<!-- nhóm con chịu xoay, có class riêng để dễ cập nhật -->
+			<g class="comp-rot" transform="rotate(${ (c.r || 0)})">
+			
+			<!-- vẽ cực -->
+			${(starX !== 0 || starY !== 0)
+				? `<circle cx="${starX}" cy="${starY}" 
+						r="${Math.min(c.size_x, c.size_y) * 0.08}" 
+						fill="red" />`
+				: ''}
+
+			<!-- vẽ khung linh kiện -->
+			<rect x="${-c.size_x / 2}" y="${-c.size_y / 2}" 
+					width="${c.size_x}" height="${c.size_y}" 
+					fill="none" 
+					stroke="rgba(100, 100, 255, 0.8)" stroke-width="0.005" />
+
+			<!-- vẽ chữ ref -->
+			${
+				(c.r % 360 === 0 || c.r % 360 === 270)// muốn xoay chữ sang bên nào thì thay đổi góc ở đây
+				? `
+					<g transform="rotate(0)">
+						<text transform="scale(0.58, -0.58)" 
+							text-anchor="middle" 
+							dominant-baseline="middle" 
+							fill="#000000" 
+							font-size="${fontSize}" 
+							font-weight="bold"
+							font-family="monospace">${c.ref}</text>
+					</g>`
+				: `
+					<g transform="rotate(180)">
+						<text transform="scale(0.58, -0.58)" 
+							text-anchor="middle" 
+							dominant-baseline="middle" 
+							fill="#000000" 
+							font-size="${fontSize}" 
+							font-weight="bold"
+							font-family="monospace">${c.ref}</text>
+					</g>`
+			}
+
+			</g>
+		</g>`;
+				}).join('');
+
+
+				return `<svg id="layer-${fileName}" xmlns="http://www.w3.org/2000/svg" version="1.1"
+						width="${vbW}mm" height="${vbH}mm"
+						viewBox="${vbX} ${vbY} ${vbW} ${vbH}">
+					<g transform="translate(0, ${yFlip}) scale(1,-1)">
+					${svgElements}
+					</g>
+				</svg>`;
+			}
+
+			//!2025-10-04 1900
+
+			//==========================================
+
+
+
+
+			focusOnElement(elementToFocus) {
+				if (this.focusedElement) {
+					this.focusedElement.classList.remove('focused-highlight');
+					const oldRow = document.querySelector(`.info-table-row[data-viewer-id="${this.focusedElement.dataset.viewerId}"]`);
+					if (oldRow) oldRow.classList.remove('focused');
+				}
+				this.focusedElement = elementToFocus;
+				if (this.focusedElement) {
+					this.focusedElement.classList.add('focused-highlight');
+					const newRow = document.querySelector(`.info-table-row[data-viewer-id="${this.focusedElement.dataset.viewerId}"]`);
+					if (newRow) newRow.classList.add('focused');
+					this.centerOnElement(this.focusedElement);
+				}
+			}
+			centerOnElement(element) {
+				if (!element) return;
+				try {
+					const viewport = document.getElementById('svgViewport');
+					const viewportRect = viewport.getBoundingClientRect();
+					const elementRect = element.getBoundingClientRect();
+					const elementCenterX_screen = elementRect.left + elementRect.width / 2;
+					const elementCenterY_screen = elementRect.top + elementRect.height / 2;
+					const viewportCenterX_screen = viewportRect.left + viewportRect.width / 2;
+					const viewportCenterY_screen = viewportRect.top + viewportRect.height / 2;
+					const deltaX_screen = viewportCenterX_screen - elementCenterX_screen;
+					const deltaY_screen = viewportCenterY_screen - elementCenterY_screen;
+					const deltaX_pan = deltaX_screen / this.zoom;
+					const deltaY_pan = deltaY_screen / this.zoom;
+					this.panX += deltaX_pan;
+					this.panY += deltaY_pan;
+					this.updateTransform();
+				} catch (e) {
+					console.error("Could not center on element:", element, e);
+				}
+			}
+			resetView() {
+				this.zoom = 1;
+				this.panX = 0;
+				this.panY = 0;
+				this.updateTransform();
+				this.updateZoomDisplay();
+			}
+			setZoom(newZoom) {
+				this.zoom = Math.max(0.1, Math.min(100, newZoom));
+				this.updateTransform();
+				this.updateZoomDisplay();
+			}
+			updateZoomDisplay() {
+				document.getElementById('zoomLevel').textContent = Math.round(this.zoom * 100) + '%';
+			}
+			startPan(e) {
+				const rect = e.currentTarget.getBoundingClientRect();
+				this.startX = e.clientX - rect.left;
+				this.startY = e.clientY - rect.top;
+				this.lastPanX = this.panX;
+				this.lastPanY = this.panY;
+				this.isPanning = true;
+				e.currentTarget.style.cursor = 'grabbing';
+			}
+
+			// xuất excel
+			exportGroupToCSV() {
+				const rows = [];
+				const headers = ["STT", "Location", "X", "Y", "Size X", "Size Y"];
+				rows.push(headers.join(","));
+
+				const tbody = document.querySelector('#groupTable tbody');
+				tbody.querySelectorAll('tr').forEach((row, i) => {
+					const cols = row.querySelectorAll('td');
+					const data = [];
+
+					// STT luôn = i+1
+					data.push(i + 1);
+
+					// Bỏ cột STT gốc, chỉ lấy từ Location (index = 1) đến cột cuối - 1
+					for (let idx = 1; idx < cols.length - 1; idx++) {
+						if (idx === 1) {
+							// Lấy giá trị Location (input)
+							const input = cols[idx].querySelector('input');
+							data.push(input ? input.value : "");
+						} else {
+							data.push(cols[idx].innerText.trim());
+						}
+					}
+
+					rows.push(data.join(","));
+				});
+
+				const csvContent = rows.join("\n");
+				const blob = new Blob([csvContent], {
+					type: 'text/csv;charset=utf-8;'
+				});
+				const url = URL.createObjectURL(blob);
+
+				const link = document.createElement("a");
+				link.setAttribute("href", url);
+				link.setAttribute("download", "group_coordinates.csv");
+				document.body.appendChild(link);
+				link.click();
+				document.body.removeChild(link);
+			}
+			//!xuất excel
+			// move vị trí
+			moveLayerOffset(layerId, dx, dy) {
+				const layer = this.layers.find(l => l.id === layerId);
+				if (!layer || !layer.groupElement) return;
+
+				// Lấy transform cũ
+				const oldTransform = layer.groupElement.getAttribute("transform") || "";
+
+				// Ghép thêm translate mới
+				const newTransform = oldTransform + ` translate(${dx},${dy})`;
+				layer.groupElement.setAttribute("transform", newTransform);
+			}
+			//! move vị trí
+			// show dấu+
+			showGroupMarker(cx, cy) {
+				if (!this.overlayLayerGroup) return;
+
+				this.overlayLayerGroup.innerHTML = ""; // clear marker cũ
+
+				// Dấu +
+				const size = this.combinedViewBox ? this.combinedViewBox.width / 50 : 5;
+
+				const line1 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+				line1.setAttribute("x1", cx - size);
+				line1.setAttribute("y1", cy);
+				line1.setAttribute("x2", cx + size);
+				line1.setAttribute("y2", cy);
+				line1.setAttribute("class", "group-marker");
+
+				const line2 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+				line2.setAttribute("x1", cx);
+				line2.setAttribute("y1", cy - size);
+				line2.setAttribute("x2", cx);
+				line2.setAttribute("y2", cy + size);
+				line2.setAttribute("class", "group-marker");
+
+				this.overlayLayerGroup.appendChild(line1);
+				this.overlayLayerGroup.appendChild(line2);
+			}
+
+			// Convert bảng (absolute app coords) -> masterSVG internal coords (do bạn đã flip Y khi render)
+			_absToMasterCoords(absX, absY) {
+				// Lưu ý: dùng cùng công thức bạn đã dùng ở getAbsoluteElementInfo 
+				// để đảo ngược phép biến đổi Y:
+				const yTotal = this.combinedViewBox.y + (this.combinedViewBox.y + this.combinedViewBox.height);
+				const masterX = absX;
+				const masterY = yTotal - absY;
+				return {
+					x: masterX,
+					y: masterY
+				};
+			}
+
+			// Trung tâm viewport vào một điểm (abs coordinates theo UI/table) — tính chính xác theo origin và flip
+			centerViewportOnAbsolutePoint(absX, absY) {
+				if (!this.masterSVG || !this.combinedViewBox) return;
+
+				// Chuyển sang tọa độ masterSVG (do bạn flip Y khi render các layer)
+				const masterPt = this._absToMasterCoords(absX, absY);
+
+				// Lấy toạ độ điểm trên màn hình
+				const pt = this.masterSVG.createSVGPoint();
+				pt.x = masterPt.x;
+				pt.y = masterPt.y;
+
+				const ctm = this.masterSVG.getScreenCTM();
+				if (!ctm) return;
+				const screenPt = pt.matrixTransform(ctm);
+
+				// Tính tâm của viewport (client coords)
+				const viewport = document.getElementById('svgViewport');
+				const rect = viewport.getBoundingClientRect();
+				const centerScreenX = rect.left + rect.width / 2;
+				const centerScreenY = rect.top + rect.height / 2;
+
+				// Delta cần dịch (px trên màn hình)
+				const dx = centerScreenX - screenPt.x;
+				const dy = centerScreenY - screenPt.y;
+
+				// Cập nhật pan dựa trên zoom (theo logic bạn đã dùng trong zoom/wheel)
+				this.panX += dx / this.zoom;
+				this.panY += dy / this.zoom;
+				this.updateTransform();
+
+				// Vẽ marker dấu + (hàm bên dưới)
+				this.showGroupMarkerAtMaster(masterPt.x, masterPt.y);
+			}
+
+
+			showGroupMarkerAtMaster(masterX, masterY) {
+				if (!this.overlayLayerGroup || !this.combinedViewBox) return;
+				// clear trước marker cũ
+				this.overlayLayerGroup.innerHTML = '';
+
+				// kích thước marker tỉ lệ với kích thước viewbox để nhìn hợp lý
+				const baseSize = Math.max(1, this.combinedViewBox.width / 80);
+
+				// ngang
+				const line1 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+				line1.setAttribute("x1", masterX - baseSize);
+				line1.setAttribute("y1", masterY);
+				line1.setAttribute("x2", masterX + baseSize);
+				line1.setAttribute("y2", masterY);
+				line1.setAttribute("class", "group-marker");
+
+				// dọc
+				const line2 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+				line2.setAttribute("x1", masterX);
+				line2.setAttribute("y1", masterY - baseSize);
+				line2.setAttribute("x2", masterX);
+				line2.setAttribute("y2", masterY + baseSize);
+				line2.setAttribute("class", "group-marker");
+
+				this.overlayLayerGroup.appendChild(line1);
+				this.overlayLayerGroup.appendChild(line2);
+			}
+			//clear dấu +
+			clearGroupMarker() {
+				if (this.overlayLayerGroup) {
+					this.overlayLayerGroup.innerHTML = '';
+				}
+			}
+		};
+
+		document.addEventListener('DOMContentLoaded', () => {
+
+			//log mini
+			const panel = document.getElementById("cmdLogPanel");
+			const logContent = document.getElementById("cmdLogContent");
+			const btnClear = document.getElementById("cmdLogClear");
+			const btnMin = document.getElementById("cmdLogMin");
+			const btnRestore = document.getElementById("cmdLogRestore");
+			let originalHeight = "150px"; // chiều cao gốc của phần logContent
+
+			btnMin.addEventListener("click", () => {
+				// Ẩn nội dung và thu nhỏ khung
+				logContent.style.display = "none";
+				panel.dataset.originalHeight = logContent.style.height || originalHeight;
+				panel.style.height = "30px"; // chỉ còn header
+				panel.style.overflow = "hidden";
+
+				btnMin.style.display = "none";
+				btnRestore.style.display = "inline-block";
+			});
+
+			btnRestore.addEventListener("click", () => {
+				// Hiện lại nội dung và phục hồi chiều cao
+				logContent.style.display = "block";
+				logContent.style.height = panel.dataset.originalHeight || originalHeight;
+				panel.style.height = "180px";
+				panel.style.overflow = "visible";
+
+				btnMin.style.display = "inline-block";
+				btnRestore.style.display = "none";
+				// logAction("📈 Phục hồi Command Log.");
+			});
+
+			btnClear.addEventListener("click", () => {
+				logContent.innerHTML = "";
+			});
+
+			window.logAction = function(msg) {
+				const timestamp = new Date().toLocaleTimeString();
+				const line = `[${timestamp}] ${msg}`;
+
+				// 🪵 Ghi ra màn hình
+				const div = document.createElement("div");
+				div.textContent = line;
+				logContent.appendChild(div);
+
+				// 🧹 Giới hạn 100 dòng
+				while (logContent.children.length > 100) {
+					logContent.removeChild(logContent.firstChild);
+				}
+
+				// 🧠 Lưu log vào localStorage
+				const logs = JSON.parse(localStorage.getItem("cmdLogs") || "[]");
+				logs.push(line);
+				if (logs.length > 100) logs.shift(); // chỉ giữ tối đa 100 dòng
+				localStorage.setItem("cmdLogs", JSON.stringify(logs));
+
+				// Tự động cuộn
+				logContent.scrollTop = logContent.scrollHeight;
+			};
+
+			logAction("✅ Command Log sẵn sàng.");
+			//!log mini
+			svgv = new SVGInteractiveViewer();
+		});
+
+
+		// lưu lên db
+		/* ====== Modal +DB (phiên bản có hậu tố md) ====== */
+		function addorupdateDBmd(idx) {
+			const partname = document.getElementById(idx + "|partname").value;
+			const sizeX = parseFloat(document.getElementById(idx + "|sx").value) || 1;
+			const sizeY = parseFloat(document.getElementById(idx + "|sy").value) || 1;
+
+			const modal = document.getElementById("dbModalmd");
+			document.getElementById("dbPartnamemd").value = partname;
+			document.getElementById("dbSizeXmd").value = sizeX;
+			document.getElementById("dbSizeYmd").value = sizeY;
+
+			// 👉 Mặc định là "none" (không có cực)
+			const dirSelect = document.getElementById("dbDirectionmd");
+			dirSelect.value = "none";
+
+			// Hiển thị modal
+			modal.style.display = "block";
+
+			// Vẽ preview ban đầu
+			drawComponentPreviewmd(partname, sizeX, sizeY, "none");
+		}
+
+		/* Đóng modal */
+		function closeModalmd() {
+			document.getElementById("dbModalmd").style.display = "none";
+		}
+
+		/* Vẽ linh kiện preview (có hỗ trợ góc và none) */
+		function drawComponentPreviewmd(dtext, sizeX, sizeY, direction) {
+			const canvas = document.getElementById('dbCanvasmd');
+			const ctx = canvas.getContext('2d');
+			const w = canvas.width,
+				h = canvas.height;
+			ctx.clearRect(0, 0, w, h);
+
+			// Tính tỷ lệ scale để hình vừa khung
+			const scale = 60 / Math.max(sizeX, sizeY);
+			const rectW = sizeX * scale;
+			const rectH = sizeY * scale;
+
+			// Vẽ khung linh kiện
+			ctx.strokeStyle = "rgba(100,100,255,0.8)";
+			ctx.lineWidth = 2;
+			ctx.strokeRect((w - rectW) / 2, (h - rectH) / 2, rectW, rectH);
+
+			const cx = w / 2,
+				cy = h / 2;
+			const offset = Math.min(rectW, rectH) / 2.6;
+			let dotX = cx,
+				dotY = cy;
+
+			// === Vẽ cực (chấm đỏ) nếu khác none ===
+			if (direction !== "none") {
+				switch (direction) {
+					case 'top':
+						dotY -= offset;
+						break;
+					case 'bottom':
+						dotY += offset;
+						break;
+					case 'left':
+						dotX -= offset;
+						break;
+					case 'right':
+						dotX += offset;
+						break;
+					case 'top-left':
+						dotX -= offset;
+						dotY -= offset;
+						break;
+					case 'top-right':
+						dotX += offset;
+						dotY -= offset;
+						break;
+					case 'bot-left':
+						dotX -= offset;
+						dotY += offset;
+						break;
+					case 'bot-right':
+						dotX += offset;
+						dotY += offset;
+						break;
+				}
+				ctx.fillStyle = "red";
+				ctx.beginPath();
+				ctx.arc(dotX, dotY, Math.min(rectW, rectH) * 0.08, 0, Math.PI * 2);
+				ctx.fill();
+			}
+
+			// === Vẽ chữ REF ở giữa ===
+			ctx.fillStyle = "#000";
+			ctx.font = "bold 14px monospace";
+			ctx.textAlign = "center";
+			ctx.textBaseline = "middle";
+			ctx.fillText("MAT", cx, cy);
+
+			// === Vẽ 4 chấm tròn màu xanh bên trái ===
+			const dotRadius = 8;
+			const leftX = dotRadius + 20; // gần sát mép trái canvas
+			const spacing = 30;
+			const startY = 20;
+
+			ctx.fillStyle = "#3366cc";
+			for (let i = 0; i < 4; i++) {
+				const y = startY + i * spacing;
+				ctx.beginPath();
+				ctx.arc(leftX, y, dotRadius, 0, Math.PI * 2);
+				ctx.fill();
+			}
+
+
+
+			// === Vẽ chữ "Material Input" sát mép dưới canvas, phóng to vừa khung ===
+
+			ctx.textAlign = "center";
+			ctx.textBaseline = "bottom";
+
+			// Tính kích thước phông tối đa để chữ vừa chiều ngang (chừa 5px mỗi bên)
+			let fontSize = 14;
+			ctx.font = `${fontSize}px sans-serif`;
+			let textWidth = ctx.measureText(dtext).width;
+			const maxWidth = w - 20; // chừa 5px hai bên
+
+			while (textWidth < maxWidth && fontSize < 48) {
+				fontSize += 1;
+				ctx.font = `${fontSize}px sans-serif`;
+				textWidth = ctx.measureText(dtext).width;
+			}
+
+			// Khi vượt quá giới hạn thì giảm lại 1 nấc
+			if (textWidth > maxWidth) {
+				fontSize -= 1;
+				ctx.font = `${fontSize}px sans-serif`;
+			}
+
+			// Vẽ chữ
+			ctx.fillStyle = "#333";
+			ctx.fillText(dtext, cx, h - 10);
+		}
+
+		/* Khi đổi hướng trong select → cập nhật canvas ngay */
+		document.addEventListener("DOMContentLoaded", () => {
+			const dirSelect = document.getElementById("dbDirectionmd");
+			if (dirSelect) {
+				dirSelect.addEventListener("change", () => {
+					const sizeX = parseFloat(document.getElementById("dbSizeXmd").value) || 1;
+					const sizeY = parseFloat(document.getElementById("dbSizeYmd").value) || 1;
+					const partname_md = document.getElementById("dbPartnamemd").value;
+					drawComponentPreviewmd(partname_md, sizeX, sizeY, dirSelect.value);
+				});
+			}
+
+			// Đóng khi click ra ngoài modal
+			window.addEventListener("click", e => {
+				const modal = document.getElementById("dbModalmd");
+				if (e.target === modal) closeModalmd();
+			});
+		});
+		// xóa table
+		// =======================
+		//-------load log mini-------------
+
+		//!load log mini
+		// 🧹 XÓA BẢNG + LAYER
+		document.addEventListener("DOMContentLoaded", () => {
+
+
+			const clearBtn = document.getElementById("clearGroupTable");
+			if (clearBtn) {
+				clearBtn.addEventListener("click", function() {
+					const table = document.getElementById("groupTable");
+					if (!table) {
+						alert("Không tìm thấy bảng groupTable!");
+						return;
+					}
+
+					const confirmDelete = confirm("Bạn có muốn xóa toàn bộ bảng và layer không?");
+					if (!confirmDelete) return;
+
+					const tbody = table.querySelector("tbody") || table;
+					while (tbody.rows.length > 0) tbody.deleteRow(0);
+
+					const svgContainer = document.getElementById("layerContainer");
+					if (!svgContainer) {
+						console.warn("⚠️ layerContainer chưa tồn tại trong DOM");
+						return; // hoặc tạo mới bên dưới
+					}
+					if (svgContainer) svgContainer.innerHTML = "";
+
+					logAction("🧹 Đã xóa toàn bộ bảng và layer SVG");
+				});
+			}
+		});
+		// =======================
+		//========command log====================
+
+		// 🪵 Hệ thống log mini
+		function logAction(msg) {
+			const logContent = document.getElementById("cmdLogContent");
+			if (!logContent) return;
+
+			const timestamp = new Date().toLocaleTimeString();
+			const line = document.createElement("div");
+			line.textContent = `[${timestamp}] ${msg}`;
+			logContent.appendChild(line);
+
+			// Giữ tối đa 100 dòng log
+			if (logContent.children.length > 100) {
+				logContent.removeChild(logContent.firstChild);
+			}
+
+			// Tự động cuộn xuống cuối
+			logContent.scrollTop = logContent.scrollHeight;
+		}
+
+		// 🧹 Nút clear
+		document.addEventListener("DOMContentLoaded", () => {
+			const clearBtn = document.getElementById("cmdLogClear");
+			if (!clearBtn) {
+				console.error("❌ Không tìm thấy nút cmdLogClear trong DOM.");
+				return;
+			}
+
+			clearBtn.addEventListener("click", () => {
+				const logContent = document.getElementById("cmdLogContent");
+				if (logContent) logContent.innerHTML = "";
+				console.log("🧹 Log đã được xóa.");
+			});
+		});
+
+
+		//!===========command log=================
+		// lấy giá trị selectiotion coor
+// === Khởi tạo dropdown & hàm lấy giá trị ===
+function initCoordDropdown() {
+    const dropdown = document.getElementById("coordDropdown");
+    if (!dropdown) {
+        console.error("⚠️ Không tìm thấy phần tử #coordDropdown");
+        return;
+    }
+
+    const toggle = dropdown.querySelector(".dropdown-toggle");
+    const menu = dropdown.querySelector(".dropdown-menu");
+
+    // === Giá trị mặc định ===
+    dropdown.dataset.value = dropdown.dataset.value || "bottom-left";
+
+    // 🔹 Khi click vào toggle → hiện/ẩn menu
+    toggle.addEventListener("click", (e) => {
+        e.stopPropagation();
+        menu.style.display = menu.style.display === "block" ? "none" : "block";
+    });
+
+    // 🔹 Khi click ra ngoài → ẩn menu
+    document.addEventListener("click", () => {
+        menu.style.display = "none";
+    });
+
+    // 🔹 Khi click chọn 1 item
+    menu.querySelectorAll("li").forEach(li => {
+        li.addEventListener("click", () => {
+            const selected = li.dataset.value;
+            dropdown.dataset.value = selected;     // lưu vào dataset
+            toggle.innerHTML = li.innerHTML;       // đổi icon hiển thị
+            menu.style.display = "none";           // ẩn menu
+            console.log("🔄 Đã chọn hệ tọa độ:", selected);
+        });
+    });
+}
+
+// === Hàm LẤY GIÁ TRỊ dropdown ===
+function getCoordDropdownValue() {
+    const dropdown = document.getElementById("coordDropdown");
+    if (!dropdown) return null;
+    return dropdown.dataset.value || "bottom-left";
+}
+
+// === GỌI KHỞI TẠO khi trang load xong ===
+document.addEventListener("DOMContentLoaded", () => {
+    initCoordDropdown();
+
+    // ✅ Ví dụ test:
+    console.log("Giá trị ban đầu:", getCoordDropdownValue());
+
+    // Test lại sau 2 giây (để bạn thử click đổi)
+    setTimeout(() => {
+        console.log("Giá trị hiện tại:", getCoordDropdownValue());
+    }, 2000);
+});
+
+//! lấy giá trị selectiotion coor
+
+
+
+		</script>
+<!-- 🪵 Command Log Panel -->
+
+<div id="cmdLogPanel" style="position: fixed; bottom: 10px; right: 10px; width: 380px;
+            background: #111; color: #0f0; font-family: monospace;
+            font-size: 13px; border: 1px solid #444; border-radius: 6px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5); z-index: 9999;">
+
+    <div id="cmdLogHeader" style="display: flex; justify-content: space-between; align-items: center;
+              background: #222; color: #fff; padding: 4px 8px;">
+        <strong>🪵 Command Log</strong>
+        <div style="display:flex; gap:4px;">
+            <button id="cmdLogMin" type="button">–</button>
+            <button id="cmdLogRestore" type="button" style="display:none;">⤢</button>
+            <button id="cmdLogClear" type="button">🧹</button>
+        </div>
+    </div>
+
+    <div id="cmdLogContent" style="height:150px; overflow-y:auto; padding:4px; background:#000;"></div>
+</div>
+
+</body>
+<!-- ===== Modal +db (phiên bản mới có hậu tố md) ===== -->
+<div id="dbModalmd" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModalmd()">&times;</span>
+        <h3>Thêm vào Database</h3>
+
+        <form id="dbFormmd">
+            <label>Part name:</label>
+            <input type="text" id="dbPartnamemd" readonly>
+
+            <label>Kích thước:</label>
+            <div style="display:flex; flex-direction:column; gap:4px;">
+                <!-- Hàng tiêu đề -->
+                <div style="display:flex; gap:5px; font-size:12px; font-weight:bold; text-align:center;">
+                    <div style="width:100px;">Size X</div>
+                    <div style="width:100px;">Size Y</div>
+                    <div style="width:100px">Pitch</div>
+                </div>
+
+                <!-- Hàng input -->
+                <div style="display:flex; gap:5px;">
+                    <input type="text" step="0.1" id="dbSizeXmd" readonly style="width:100px;" value="4">
+                    <input type="number" step="0.1" id="dbSizeYmd" readonly style="width:100px;" value="2">
+                    <input type="number" step="2" id="dbPitchmd" readonly style="width:100px;" value="0">
+                </div>
+            </div>
+
+            <label>Hướng linh kiện:</label>
+            <select id="dbDirectionmd" style="width:100%; margin-bottom:10px;height:40px;font-size: 14px;">
+                <option value="none">None</option>
+                <option value="top">Top</option>
+                <option value="bottom">Bottom</option>
+                <option value="left">Left</option>
+                <option value="right">Right</option>
+                <option value="top-left">Top-Left</option>
+                <option value="top-right">Top-Right</option>
+                <option value="bot-left">Bottom-Left</option>
+                <option value="bot-right">Bottom-Right</option>
+            </select>
+
+            <div style="text-align:center;">
+                <canvas id="dbCanvasmd" width="180" height="180" style="border:1px solid #ccc; background:#fafafa; border-radius:6px;">
+                </canvas>
+            </div>
+
+            <label>Ghi chú:</label>
+            <textarea id="dbNotemd" placeholder="Ghi chú thêm..." rows="3"></textarea>
+            <button type="submit">Lưu</button>
+        </form>
+    </div>
+</div>
+</html>
